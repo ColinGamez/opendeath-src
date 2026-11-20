@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Features — OpenDeath</title>
+    <meta name="description" content="Eight network routes, automatic rotation, relaunch resume, a full desktop workspace, and a guided Windows installer." />
+    <link rel="canonical" href="https://open.death.cl/features" />
+    <link rel="icon" href="favicon.ico?v=2" sizes="any" />
+    <link rel="icon" href="assets/skull.png?v=2" type="image/png" />
+    <link rel="apple-touch-icon" href="assets/skull.png?v=2" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Features — OpenDeath" />
+    <meta property="og:description" content="Eight network routes, automatic rotation, relaunch resume, a full desktop workspace, and a guided Windows installer." />
+    <meta property="og:url" content="https://open.death.cl/features" />
+    <meta property="og:image" content="https://open.death.cl/assets/og.png?v=2" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#0d0a09" />
+    <link rel="stylesheet" href="assets/site.css?v=2" />
+    <script src="assets/site.js?v=2" defer></script>
+  </head>
+  <body>
+    <div class="scroll-progress" aria-hidden="true"></div>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="/" aria-label="OpenDeath home">
+          <img src="assets/skull.png?v=2" alt="" width="30" height="30" />
+          <span class="brand-word">Open<b>Death</b></span>
+        </a>
+        <nav class="nav" aria-label="Primary">
+          <a href="/">Overview</a>
+          <a href="features" aria-current="page">Features</a>
+          <a href="download">Download</a>
+          <a href="docs">Docs</a>
+          <a href="faq">FAQ</a>
+        </nav>
+        <div class="header-meta">
+          <span class="chip">v1.0.3</span>
+          <a class="btn btn-primary btn-small" href="download">Download</a>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="page-hero">
+        <div class="container">
+          <div class="breadcrumb"><a href="/">Home</a> / Features</div>
+          <h1>Everything the deck does.</h1>
+          <p class="lede">
+            OpenDeath is one desktop app with two jobs: give you a serious workspace, and keep
+            the route healthy while you use it. Here is the whole surface.
+          </p>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <span class="section-number">01 — Routes</span>
+              <h2>Eight ways<br />to leave.</h2>
+            </div>
+            <p class="lede">
+              Switch modes from the deck. Each route has its own setup, status, and recovery
+              path, so a failed tunnel never means a failed session.
+            </p>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Mode</th><th>What it uses</th><th>Setup</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><b>Auto</b></td><td>Picks a healthy route from the configured modes</td><td>None</td></tr>
+                <tr><td><b>WARP</b></td><td>Cloudflare WARP client</td><td>Required. The default route, installed first</td></tr>
+                <tr><td><b>HTTP Proxy</b></td><td>One proxy or a rotating host:port list</td><td>Paste a list or URL</td></tr>
+                <tr><td><b>SOCKS5</b></td><td>Local or remote SOCKS5 server</td><td>Enter host and port</td></tr>
+                <tr><td><b>Route64</b></td><td>IPv6 route rotation helpers</td><td>Import a route list</td></tr>
+                <tr><td><b>Mullvad</b></td><td>Mullvad VPN desktop client</td><td>Install and sign in</td></tr>
+                <tr><td><b>Windscribe</b></td><td>Windscribe desktop client</td><td>Install and sign in</td></tr>
+                <tr><td><b>None</b></td><td>Direct connection</td><td>None</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="modes mt-28">
+            <div class="mode"><b>Reset limit</b><span>Clear and retry</span></div>
+            <div class="mode"><b>Auto-rotate</b><span>1–50 attempts</span></div>
+            <div class="mode"><b>Fix connection</b><span>Rebuild the route</span></div>
+            <div class="mode"><b>Status</b><span>Exit IP and health</span></div>
+            <div class="mode"><b>Burned IPs</b><span>24-hour memory</span></div>
+            <div class="mode"><b>Fast mode</b><span>Skip the pre-check</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <span class="section-number">02 — Recovery</span>
+              <h2>Keep the<br />session alive.</h2>
+            </div>
+            <p class="lede">
+              The recovery layer watches for a free limit, changes the exit, and resumes the
+              chats that are waiting. It does this without closing the workspace.
+            </p>
+          </div>
+
+          <div class="steps">
+            <div class="step">
+              <h3>Detect</h3>
+              <p>The event stream reports a provider free limit for a live chat.</p>
+            </div>
+            <div class="step">
+              <h3>Rotate</h3>
+              <p>OpenDeath probes candidate exits and avoids IPs it has already burned.</p>
+            </div>
+            <div class="step">
+              <h3>Verify</h3>
+              <p>The new route must answer before anything is sent to the provider.</p>
+            </div>
+            <div class="step">
+              <h3>Continue</h3>
+              <p>Every waiting chat receives <code>continue</code> in parallel, with duplicate protection.</p>
+            </div>
+          </div>
+
+          <div class="feature-grid mt-28">
+            <article class="feature">
+              <span class="feature-index">01</span>
+              <h3>Relaunch resume</h3>
+              <p>Waiting chats are stored in <code>pending.json</code>. On the next launch they are restored and resumed once the route is ready.</p>
+            </article>
+            <article class="feature">
+              <span class="feature-index">02</span>
+              <h3>Quiet window</h3>
+              <p>A short per-chat delay plus a rotation lock prevents the same limit from being answered twice.</p>
+            </article>
+            <article class="feature">
+              <span class="feature-index">03</span>
+              <h3>Explicit status</h3>
+              <p>The deck reports what happened, how many chats were updated, and what is left for you to send.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <span class="section-number">03 — Workspace</span>
+              <h2>A full room,<br />not a chat box.</h2>
+            </div>
+            <p class="lede">
+              Sessions, tabs, diffs, a terminal, a browser, and dictation. The network deck sits
+              under the title bar where it belongs.
+            </p>
+          </div>
+
+          <div class="feature-grid">
+            <article class="feature">
+              <span class="feature-index">01</span>
+              <h3>Sessions and tabs</h3>
+              <p>Keep several threads open, switch without losing scroll position, and reopen a closed tab from the strip.</p>
+            </article>
+            <article class="feature">
+              <span class="feature-index">02</span>
+              <h3>Diffs and terminal</h3>
+              <p>Review file changes beside the conversation and run commands in a real terminal pane.</p>
+            </article>
+            <article class="feature">
+              <span class="feature-index">03</span>
+              <h3>Built-in browser</h3>
+              <p>Open a page, inspect it, and bring what you find back into the session without a second app.</p>
+            </article>
+            <article class="feature">
+              <span class="feature-index">04</span>
+              <h3>Voice dictation</h3>
+              <p>Speak a prompt when typing is slower. Dictation is available anywhere the composer is.</p>
+            </article>
+            <article class="feature">
+              <span class="feature-index">05</span>
+              <h3>Themes and color</h3>
+              <p>Dark by default, with light and system themes, custom backgrounds, rainbow accents, and a text color that stays readable.</p>
+            </article>
+            <article class="feature">
+              <span class="feature-index">06</span>
+              <h3>A real control room</h3>
+              <p>Basic, Advanced, and Personalization tabs replace the wall of settings with three clear groups.</p>
+            </article>
+          </div>
+
+          <div class="plate mt-28">
+            <div class="plate-head">
+              <span>Personalization</span>
+              <b>settings / control room</b>
+            </div>
+            <img src="assets/personalization.png?v=2" alt="OpenDeath personalization settings with background, rainbow, and text color controls" width="1100" height="692" />
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <span class="section-number">04 — Distribution</span>
+              <h2>Installed<br />like an app.</h2>
+            </div>
+            <p class="lede">
+              A per-user setup wizard or a single portable executable. Both run the same build
+              and keep their data in the same place.
+            </p>
+          </div>
+
+          <div class="feature-grid">
+            <article class="feature">
+              <span class="feature-index">01</span>
+              <h3>Setup wizard</h3>
+              <p>Checks for OpenCode Desktop, offers official VPN packages, creates shortcuts, and registers an uninstaller.</p>
+            </article>
+            <article class="feature">
+              <span class="feature-index">02</span>
+              <h3>Portable build</h3>
+              <p>A single executable that extracts to a temporary folder. No shortcuts, no registry entry, no installer.</p>
+            </article>
+            <article class="feature">
+              <span class="feature-index">03</span>
+              <h3>Bundled engine</h3>
+              <p>The OpenCode engine ships inside the app. You do not need a separate CLI install.</p>
+            </article>
+            <article class="feature">
+              <span class="feature-index">04</span>
+              <h3>One dependency</h3>
+              <p>The engine ships inside the app. The WARP client is the only thing that has to be installed, and the wizard puts it in place first.</p>
+            </article>
+            <article class="feature">
+              <span class="feature-index">05</span>
+              <h3>Pointed at itself</h3>
+              <p>Desktop and Start menu shortcuts launch <code>opendeath.exe</code>, never the OpenCode window.</p>
+            </article>
+            <article class="feature">
+              <span class="feature-index">06</span>
+              <h3>Clean uninstall</h3>
+              <p>The uninstaller removes the app and shortcuts but keeps your settings and waiting chats.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <span class="section-number">05 — Boundaries</span>
+              <h2>What it<br />doesn't do.</h2>
+            </div>
+            <p class="lede">
+              A shorter list, and an important one. OpenDeath is deliberately not an account and
+              not a cloud.
+            </p>
+          </div>
+
+          <div class="prose">
+            <ul>
+              <li><b>No telemetry.</b> No analytics, usage reporting, or crash upload endpoint was added.</li>
+              <li><b>No OpenDeath account.</b> There is no OpenDeath server to sign in to.</li>
+              <li><b>No silent updates.</b> A new build is downloaded in the background, but it only installs when you say yes to the restart.</li>
+              <li><b>No replacement for OpenCode Desktop.</b> It installs alongside and keeps its own executable and data folder.</li>
+              <li><b>No hidden proxy.</b> Provider traffic goes to the provider you configured, through the route you selected.</li>
+            </ul>
+          </div>
+
+          <div class="btn-row mt-28">
+            <a class="btn btn-primary" href="download">Download 1.0.3</a>
+            <a class="btn btn-ghost" href="docs">Read the docs</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="footer-grid">
+          <div class="footer-brand">
+            <a class="brand" href="/">
+              <img src="assets/skull.png?v=2" alt="" width="28" height="28" />
+              <span class="brand-word">Open<b>Death</b></span>
+            </a>
+            <p>A standalone desktop workspace from saintkyle. Built for long sessions, changing routes, and work that should not stop.</p>
+            <p class="small faint mt-12"><span data-download-count>59</span> downloads · v1.0.3</p>
+          </div>
+          <div class="footer-col">
+            <h4>Product</h4>
+            <a href="features">Features</a>
+            <a href="download">Download</a>
+            <a href="docs">Documentation</a>
+            <a href="faq">FAQ</a>
+          </div>
+          <div class="footer-col">
+            <h4>Release</h4>
+            <a href="download#files">Download 1.0.3</a>
+            <a href="download#verify">Verify a file</a>
+            <a href="download#requirements">Requirements</a>
+            <a href="downloads/SHA256SUMS.txt">SHA-256 sums</a>
+          </div>
+          <div class="footer-col">
+            <h4>Support</h4>
+            <a href="faq">Common questions</a>
+            <a href="docs">Documentation</a>
+            <a href="docs#troubleshooting">Troubleshooting</a>
+            <a href="docs#routes">Route setup</a>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>© 2026 OpenDeath. All rights reserved.</span>
+          <div class="legal">
+            <span>Closed-source distribution</span>
+            <span>Not affiliated with OpenCode</span>
+            <span>Windows 10 / 11</span>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

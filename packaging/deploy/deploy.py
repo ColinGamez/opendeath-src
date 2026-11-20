@@ -1,0 +1,150 @@
+"""Deploy open.death.cl over SSH/SFTP with password auth.
+
+Usage:
+  py deploy/deploy.py check
+  py deploy/deploy.py deploy
+"""
+
+import os
+import sys
+import stat
+import posixpath
+
+import paramiko
+
+HOST = os.environ.get("OPEND_SSH_HOST", "YOUR_SERVER_IP")
+USER = os.environ.get("OPEND_SSH_USER", "root")
+PASSWORD = os.environ.get("OPEND_SSH_PASSWORD", "")
+VERSION = os.environ.get("OPEND_VERSION", "1.0.3")
+
+LOCAL_SITE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "website"))
+LOCAL_RELEASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "release"))
+REMOTE_SITE = "/var/www/open.death.cl"
+
+# Live counter written by the nginx-log cron job. Never overwrite it from the local copy.
+SKIP_NAMES = {"downloads.json"}
+SKIP_DIRS = {"downloads"}
+
+
+def connect():
+    if not PASSWORD:
+        raise SystemExit("set OPEND_SSH_PASSWORD before running this script")
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(HOST, username=USER, password=PASSWORD, timeout=30, banner_timeout=30, auth_timeout=30)
+    return client
+
+
+def run(client, command):
+    stdin, stdout, stderr = client.exec_command(command, timeout=120)
+    out = stdout.read().decode("utf-8", "replace")
+    err = stderr.read().decode("utf-8", "replace")
+    code = stdout.channel.recv_exit_status()
+    return code, out, err
+
+
+def check(client):
+    for cmd in [
+        "hostname",
+        "nginx -v",
+        "ls -la /var/www/open.death.cl | head -40",
+        "ls -la /var/www/open.death.cl/downloads | head -40",
+        "cat /var/www/open.death.cl/downloads/SHA256SUMS.txt 2>/dev/null",
+        "cat /var/www/open.death.cl/downloads.json 2>/dev/null",
+    ]:
+        code, out, err = run(client, cmd)
+        print(f"$ {cmd}\n{out}{err}(exit {code})\n")
+
+
+def ensure_remote_dir(sftp, path):
+    parts = path.strip("/").split("/")
+    cur = ""
+    for part in parts:
+        cur += "/" + part
+        try:
+            sftp.stat(cur)
+        except IOError:
+            sftp.mkdir(cur)
+
+
+def upload_site(sftp):
+    count = 0
+    for root, dirs, files in os.walk(LOCAL_SITE):
+        dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+        rel = os.path.relpath(root, LOCAL_SITE)
+        remote_dir = REMOTE_SITE if rel == "." else posixpath.join(REMOTE_SITE, rel.replace(os.sep, "/"))
+        ensure_remote_dir(sftp, remote_dir)
+        for name in files:
+            if name in SKIP_NAMES:
+                continue
+            local = os.path.join(root, name)
+            remote = posixpath.join(remote_dir, name)
+            sftp.put(local, remote)
+            count += 1
+    return count
+
+
+def upload_downloads(sftp):
+    remote_dir = posixpath.join(REMOTE_SITE, "downloads")
+    ensure_remote_dir(sftp, remote_dir)
+    names = [
+        f"OpenDeath-Setup-{VERSION}.exe",
+        f"OpenDeath-Portable-{VERSION}.exe",
+        "SHA256SUMS.txt",
+        # electron-updater reads its feed from here, so it ships with the binaries.
+        "latest.yml",
+    ]
+    for name in names:
+        local = os.path.join(LOCAL_RELEASE, name)
+        if not os.path.exists(local):
+            raise SystemExit(f"missing local file: {local}")
+        size = os.path.getsize(local)
+        print(f"uploading {name} ({size:,} bytes) ...", flush=True)
+        sftp.put(local, posixpath.join(remote_dir, name), callback=lambda done, total: None)
+        print(f"  done {name}", flush=True)
+    return names
+
+
+def fix_permissions(client):
+    commands = [
+        "chown -R www-data:www-data /var/www/open.death.cl",
+        "find /var/www/open.death.cl -type d -exec chmod 755 {} +",
+        "find /var/www/open.death.cl -type f -exec chmod 644 {} +",
+    ]
+    for cmd in commands:
+        code, out, err = run(client, cmd)
+        if code != 0:
+            print(f"warn: {cmd}: {err}")
+    code, out, err = run(client, "nginx -t && systemctl reload nginx && echo RELOADED")
+    print(out, err)
+    if code != 0:
+        raise SystemExit("nginx reload failed")
+
+
+def main():
+    mode = sys.argv[1] if len(sys.argv) > 1 else "check"
+    client = connect()
+    try:
+        if mode == "check":
+            check(client)
+            return
+        sftp = client.open_sftp()
+        try:
+            print("uploading site files ...", flush=True)
+            n = upload_site(sftp)
+            print(f"site files uploaded: {n}", flush=True)
+            if mode != "site":
+                print("uploading release files ...", flush=True)
+                upload_downloads(sftp)
+        finally:
+            sftp.close()
+        fix_permissions(client)
+        code, out, err = run(client, "ls -la /var/www/open.death.cl/downloads; echo ---; date -u")
+        print(out, err)
+        print("DEPLOY OK")
+    finally:
+        client.close()
+
+
+if __name__ == "__main__":
+    main()

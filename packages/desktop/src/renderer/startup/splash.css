@@ -1,0 +1,61 @@
+[data-component="startup-splash"] [data-slot="splash-mark"] {
+  animation: opendeath-splash-in 420ms ease-out both;
+}
+
+[data-component="startup-splash"] [data-slot="splash-halo"] {
+  animation: opendeath-splash-halo 2.8s ease-in-out infinite;
+}
+
+@keyframes opendeath-splash-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes opendeath-splash-halo {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+[data-component="first-launch-splash"] [data-slot="first-launch-logo"] {
+  /* The supplied wordmark fades in where the old drawn mark used to animate. */
+  animation: first-launch-logo-draw 1000ms ease-out both;
+}
+
+[data-component="first-launch-splash"][data-drawing="pending"] [data-slot="first-launch-logo"] {
+  animation-play-state: paused;
+}
+
+@keyframes first-launch-logo-draw {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-component="startup-splash"] [data-slot="splash-mark"],
+  [data-component="startup-splash"] [data-slot="splash-halo"] {
+    animation: none;
+  }
+
+  [data-component="first-launch-splash"] [data-slot="first-launch-logo"] {
+    animation: none;
+  }
+}

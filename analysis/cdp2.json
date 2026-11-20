@@ -1,0 +1,9 @@
+[ {
+   "description": "",
+   "devtoolsFrontendUrl": "/devtools/inspector.html?ws=127.0.0.1:9222/devtools/page/7503271C0A9907E1BC8AFAAC647F5A07",
+   "id": "7503271C0A9907E1BC8AFAAC647F5A07",
+   "title": "Read-only PC malware scan · opendeath",
+   "type": "page",
+   "url": "oc://renderer/index.html",
+   "webSocketDebuggerUrl": "ws://127.0.0.1:9222/devtools/page/7503271C0A9907E1BC8AFAAC647F5A07"
+} ]
