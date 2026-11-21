@@ -55,3 +55,7 @@ analysis/cleanprofile/
 *.db
 *.db-wal
 *.db-shm
+
+# Deployment staging: release binaries and the live counter are not source.
+packaging/website/downloads/
+packaging/website/downloads.json

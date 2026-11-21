@@ -12,8 +12,14 @@ $pages = @(
   'https://open.death.cl/downloads/SHA256SUMS.txt',
   'https://open.death.cl/assets/site.css',
   'https://open.death.cl/assets/site.js',
-  'https://open.death.cl/downloads/OpenDeath-Setup-1.0.0.exe',
-  'https://open.death.cl/downloads/OpenDeath-Portable-1.0.0.exe'
+  'https://open.death.cl/downloads/OpenDeath-Setup-1.0.4.exe',
+  'https://open.death.cl/downloads/OpenDeath-Portable-1.0.4.exe',
+  'https://open.death.cl/downloads/install.sh',
+  'https://open.death.cl/downloads/SHA256SUMS-linux.txt',
+  'https://open.death.cl/downloads/OpenDeath-1.0.4-x86_64.AppImage',
+  'https://open.death.cl/downloads/OpenDeath-1.0.4-amd64.deb',
+  'https://open.death.cl/downloads/OpenDeath-1.0.4-x86_64.rpm',
+  'https://open.death.cl/downloads/opendeath-cli-1.0.4-linux-x64.tar.gz'
 )
 foreach ($page in $pages) {
   $code = & curl.exe -s -o NUL -I --max-time 30 -w "%{http_code}" $page 2>&1

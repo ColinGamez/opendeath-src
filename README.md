@@ -5,13 +5,13 @@
 <h1 align="center">OpenDeath</h1>
 
 <p align="center">
-  A Windows desktop AI workspace with a network deck.<br />
+  A Windows and Linux desktop AI workspace with a network deck.<br />
   WARP-first routing, automatic rotation, limit recovery, relaunch resume.
 </p>
 
 <p align="center">
   <a href="https://open.death.cl">open.death.cl</a> ·
-  <b>1.0.3</b> ·
+  <b>1.0.4</b> ·
   MIT
 </p>
 
@@ -19,7 +19,7 @@
 
 ## What it is
 
-OpenDeath is a standalone Windows desktop application built on the
+OpenDeath is a standalone desktop application for Windows and Linux, built on the
 [opencode](https://github.com/sst/opencode) engine. It keeps its own executable, its own data
 folder and its own settings. Two layers:
 
@@ -40,9 +40,14 @@ browser, voice dictation, themes and accent colours, and a HUD you can rearrange
 | **None** | Direct. Honest about it: no IP is claimed to have changed |
 
 When a session hits a limit, **Reset limit** archives the session, renews the IP and restores the
-session on the new exit. Waiting chats are written to disk, so a relaunch resumes them and sends
-`continue` once a new route is ready. The doctor tries what actually works on this machine
+session on the new exit, even when the rotation fails. Waiting chats are written to disk, so a
+relaunch resumes them and sends `continue` once a new route is ready. **Help** shows the last error
+with the fixes and copyable commands for it. The doctor tries what actually works on this machine
 instead of asking questions.
+
+WARP rotation uses `warp-cli tunnel rotate-keys`: a new local key makes Cloudflare hand out a new
+exit without a new registration, so the "does not accept new ones for now" rate limit no longer
+stops **New IP**. A redial is next, and a registration only once per ten minutes when both fail.
 
 **Tor is not part of this product.** It was removed in 1.0.3 at every layer: no bundled binary,
 no route, no code path. The routes above are the whole deck.
@@ -51,19 +56,34 @@ no route, no code path. The routes above are the whole deck.
 
 Download from [open.death.cl](https://open.death.cl/download):
 
-- `OpenDeath-Setup-1.0.3.exe` — guided per-user install, shortcuts, uninstaller
-- `OpenDeath-Portable-1.0.3.exe` — single file, runs from any folder
+Windows:
 
-Windows 10 or 11, 64-bit. No administrator account is needed. Cloudflare WARP is the one
-required dependency and the wizard installs it before the app. WireGuard, Mullvad and
-Windscribe are optional, only for the route you actually use.
+- `OpenDeath-Setup-1.0.4.exe` - guided per-user install, shortcuts, uninstaller, optional `opendeath` CLI
+- `OpenDeath-Portable-1.0.4.exe` - single file, runs from any folder
+
+Linux, one command (AppImage, deb or rpm chosen from `/etc/os-release`, plus the CLI):
+
+```sh
+curl -fsSL https://open.death.cl/downloads/install.sh | sh
+```
+
+Add `--warp` to install Cloudflare WARP in the same run. Debian, Ubuntu, Mint, Pop!_OS, Kali,
+Fedora, RHEL, Rocky, AlmaLinux, Nobara, Arch, CachyOS, Manjaro, EndeavourOS, Garuda and openSUSE
+are detected; anything else gets the AppImage. Arch users can also install `opendeath-bin` from
+the AUR (`packaging/linux/PKGBUILD`).
+
+Windows 10 or 11, 64-bit, or a modern 64-bit Linux distribution. No administrator account is
+needed on Windows. Cloudflare WARP is the one required dependency; on Linux the installer can add
+it, and the app detects an existing `warp-cli`. WireGuard, Mullvad and Windscribe are optional,
+only for the route you actually use.
 
 Installed builds check for updates at launch and every ten minutes after that, download in the
-background, and ask once to restart. Portable builds do not self-update — replace the file.
+background, and ask once to restart. Portable builds do not self-update - replace the file. Linux
+packages are built by `.github/workflows/linux.yml` and attached to the release.
 
 ## Build from source
 
-Requires [Bun](https://bun.sh) 1.4.4 and Node 22+, on Windows x64.
+Requires [Bun](https://bun.sh) 1.4.4 and Node 22+, on Windows x64 for the NSIS build. The Linux packages are built on Ubuntu by `.github/workflows/linux.yml`, because electron-builder needs rpm and fpm there.
 
 ```powershell
 bun install
@@ -96,6 +116,7 @@ packages\app\          The workspace UI (Solid): sessions, deck, doctor, setting
 packages\gui-plugins\  GUI plugin host, including the auto-updater
 packages\core\         Engine, providers, tools
 packaging\installer\   NSIS setup script
+packaging\linux\       Linux installer, AUR PKGBUILD
 packaging\website\     Static site served at open.death.cl
 packaging\deploy\      Release and deploy tooling
 ```

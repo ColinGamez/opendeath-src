@@ -54,7 +54,28 @@ per user, without administrator rights.
 Do not build the setup with electron-builder's `nsis` target: its compressor settings produce a
 noticeably larger installer from the same payload.
 
-## 6. Checks
+## 6. Linux packages
+
+Linux packaging needs a Linux host (`rpm`, `fpm` and `dpkg`). The GitHub Actions workflow
+`.github/workflows/linux.yml` does this on `ubuntu-22.04` and attaches AppImage, deb, rpm and the
+CLI archive to the release. To build the same files locally:
+
+```bash
+cd packages/cli
+OPENCODE_CHANNEL=prod OPENCODE_TARGET=linux-x64-baseline bun run script/build.ts
+bun run pack
+
+cd ../desktop
+OPENCODE_CHANNEL=prod OPENCODE_TARGET=linux-x64 bun run build
+bun run pack
+```
+
+`packages/desktop/script/build.ts` finds the bundled CLI at
+`packages/cli/dist/cli-linux-x64-baseline`. `packaging/linux/install.sh` installs the resulting
+AppImage/deb/rpm and the CLI tarball; `packaging/linux/PKGBUILD` is the AUR `opendeath-bin`
+package.
+
+## 7. Checks
 
 ```powershell
 bunx tsc -b packages\desktop --force

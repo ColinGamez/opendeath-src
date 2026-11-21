@@ -1,0 +1,95 @@
+name: linux
+
+# Builds the Linux releases on a real Ubuntu host: AppImage, deb, rpm and the `opendeath` CLI archive.
+# Windows artifacts are built on the Windows machine; this workflow covers what only Linux can package.
+#
+# Run it from Actions -> linux -> Run workflow, or push a tag such as v1.0.4. The files are attached to that
+# GitHub release when the run was started by a tag.
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: linux-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  OPENCODE_CHANNEL: prod
+  OPENCODE_TARGET: linux-x64
+  BUN_COMPILE_RELEASE: bun-v1.4.4
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Set up packaging tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends rpm libarchive-tools
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build the CLI
+        working-directory: packages/cli
+        env:
+          # The desktop bundles the baseline build, which runs on CPUs without AVX2 too.
+          OPENCODE_TARGET: linux-x64-baseline
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          bun run script/build.ts
+          bun run pack
+
+      - name: Build the desktop app
+        working-directory: packages/desktop
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: |
+          bun run build
+          bun run pack
+
+      - name: Collect release files
+        run: |
+          set -euo pipefail
+          version="$(jq -r .version packages/desktop/package.json)"
+          mkdir -p out
+          cp packages/desktop/dist/desktop/*.AppImage "out/OpenDeath-${version}-x86_64.AppImage"
+          cp packages/desktop/dist/desktop/*.deb "out/OpenDeath-${version}-amd64.deb"
+          cp packages/desktop/dist/desktop/*.rpm "out/OpenDeath-${version}-x86_64.rpm"
+          cp packages/cli/dist/archives/opencode-linux-x64-baseline.tar.gz "out/opendeath-cli-${version}-linux-x64.tar.gz"
+          cp packaging/linux/install.sh out/install.sh
+          ( cd out && sha256sum * > SHA256SUMS-linux.txt )
+          ls -lh out
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: open-death-linux
+          path: out/*
+          if-no-files-found: error
+
+      - name: Attach to the release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/*
+          fail_on_unmatched_files: true

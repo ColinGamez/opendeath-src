@@ -20,6 +20,7 @@ const LABELS: Record<HudItem, { title: string; hint: string }> = {
   connection: { title: "Connection modes", hint: "Auto, None, and the rest in advanced mode." },
   fix: { title: "Fix connection", hint: "Tests what works here and puts the best route in place." },
   status: { title: "Status", hint: "Opens the connection panel." },
+  help: { title: "Help", hint: "Shows the current error and the fixes that apply to it." },
   resetLimit: { title: "Reset limit", hint: "Archives the session and renews the IP." },
   rotateNow: { title: "New IP now", hint: "Rotates the exit IP without touching the session." },
   jailbreak: { title: "Jailbreak", hint: "Sends prompts through the hidden agent." },

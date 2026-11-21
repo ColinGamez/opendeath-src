@@ -17,6 +17,7 @@ export const HUD_ITEMS = [
   "connection",
   "fix",
   "status",
+  "help",
   "resetLimit",
   "rotateNow",
   "jailbreak",

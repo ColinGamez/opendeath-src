@@ -1,10 +1,10 @@
 /* OpenDeath site — live download counter, then presentation.
    The count comes from /downloads.json, which the server updates from the
-   download access log. It starts at 59 and survives redeploys. */
+   download access log. It starts at 612 and survives redeploys and log rotation. */
 
 const COUNTER_URL = "/downloads.json"
-const BASELINE = 59
-const CACHE_KEY = "opendeath.downloads.v2"
+const BASELINE = 612
+const CACHE_KEY = "opendeath.downloads.v3"
 
 function format(value) {
   return new Intl.NumberFormat("en-US").format(value)
@@ -37,6 +37,9 @@ function writeCache(value) {
 }
 
 async function refresh() {
+  // The highest number this browser has seen is the floor. An unreachable counter, a rotated log or a bad payload
+  // must never make the public number go backwards to the baseline.
+  const floor = Math.max(readCache() ?? 0, BASELINE)
   try {
     const response = await fetch(`${COUNTER_URL}?t=${Date.now()}`, {
       headers: { Accept: "application/json" },
@@ -44,17 +47,19 @@ async function refresh() {
     })
     if (!response.ok) throw new Error(`Counter returned ${response.status}`)
     const payload = await response.json()
-    const value = Number(payload.downloads)
-    if (!Number.isFinite(value) || value < BASELINE) throw new Error("Unexpected counter payload")
+    const reported = Number(payload.downloads)
+    if (!Number.isFinite(reported)) throw new Error("Unexpected counter payload")
+    const value = Math.max(reported, floor)
     render(value)
     writeCache(value)
   } catch {
-    /* Keep the cached value or the baseline. The page never blocks on the counter. */
-    render(readCache() ?? BASELINE)
+    /* Keep the highest cached value or the baseline. The page never blocks on the counter and never regresses. */
+    render(floor)
+    writeCache(floor)
   }
 }
 
-render(readCache() ?? BASELINE)
+render(Math.max(readCache() ?? 0, BASELINE))
 void refresh()
 
 let lastCheck = Date.now()

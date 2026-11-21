@@ -37,7 +37,7 @@
           <a href="faq">FAQ</a>
         </nav>
         <div class="header-meta">
-          <span class="chip">v1.0.3</span>
+          <span class="chip">v1.0.4</span>
           <a class="btn btn-primary btn-small" href="download">Download</a>
         </div>
       </div>
@@ -72,8 +72,8 @@
 
             <h2 id="requirements">Requirements</h2>
             <ul>
-              <li><b>Windows 10 22H2 or Windows 11, 64-bit.</b> Windows on ARM is not supported by this build.</li>
-              <li><b>OpenCode Desktop.</b> Required. Install the official desktop build first; the OpenDeath wizard checks for it and links to the download if it is missing.</li>
+              <li><b>Windows 10 22H2 or Windows 11, 64-bit; or a modern 64-bit Linux distribution.</b> Linux packages are AppImage, deb and rpm; Windows on ARM is not supported by this build.</li>
+              <li><b>OpenCode Desktop (Windows).</b> Required on Windows. Install the official desktop build first; the OpenDeath wizard checks for it and links to the download if it is missing.</li>
               <li><b>Internet access.</b> Needed for provider sign-in, model requests, and optional components.</li>
               <li><b>About 1.3 GB free disk space.</b> The portable build also needs room for its extracted runtime.</li>
               <li><b>No administrator account.</b> Both builds install per user. Administrator rights may be needed only if you choose to install a system-wide VPN client.</li>
@@ -87,7 +87,7 @@
             <h2 id="install">Install and first launch</h2>
             <h3>With the setup wizard</h3>
             <ol>
-              <li>Download and verify <code>OpenDeath-Setup-1.0.3.exe</code> against <a class="text-link" href="downloads/SHA256SUMS.txt">SHA256SUMS.txt</a>.</li>
+              <li>Download and verify <code>OpenDeath-Setup-1.0.4.exe</code> against <a class="text-link" href="downloads/SHA256SUMS.txt">SHA256SUMS.txt</a>.</li>
               <li>Run the wizard. It installs Cloudflare WARP first, then checks for OpenCode Desktop, before it copies anything.</li>
               <li>Choose a destination, shortcuts, and any optional VPN clients you want. WARP is required.</li>
               <li>Finish the wizard and launch OpenDeath from the new shortcut.</li>
@@ -95,15 +95,40 @@
 
             <h3>With the portable build</h3>
             <p>
-              Put <code>OpenDeath-Portable-1.0.3.exe</code> in a folder you control and run it. It
+              Put <code>OpenDeath-Portable-1.0.4.exe</code> in a folder you control and run it. It
               extracts to a temporary folder and leaves no shortcuts. Settings still live in your
               Windows profile, so moving the executable does not lose them.
+            </p>
+
+            <h3>On Linux</h3>
+            <p>
+              One command installs the app and the <code>opendeath</code> terminal CLI. The script reads
+              <code>/etc/os-release</code>, picks deb, rpm or AppImage, verifies every checksum, and adds
+              the menu entry.
+            </p>
+            <pre><code>curl -fsSL https://open.death.cl/downloads/install.sh | sh</code></pre>
+            <p>
+              Debian, Ubuntu, Mint, Pop!_OS, Kali and their derivatives use the <code>.deb</code>;
+              Fedora, RHEL, Rocky, AlmaLinux, Nobara and openSUSE use the <code>.rpm</code>; Arch,
+              CachyOS, Manjaro, EndeavourOS and Garuda use the AppImage (or the
+              <code>opendeath-bin</code> AUR package). Add <code>--warp</code> to install Cloudflare
+              WARP in the same run:
+            </p>
+            <pre><code>curl -fsSL https://open.death.cl/downloads/install.sh | sh -s -- --warp</code></pre>
+
+            <h3>The opendeath terminal CLI</h3>
+            <p>
+              The Windows setup has a <b>Command line (opendeath)</b> checkbox. It writes
+              <code>opendeath.cmd</code> next to the app and adds it to your user PATH, so
+              <code>opendeath</code> works in a new terminal. On Linux the installer places the same
+              engine at <code>/usr/local/bin/opendeath</code>. Run <code>opendeath --help</code> for the
+              commands; <code>opendeath run</code> is the non-interactive form.
             </p>
 
             <h3>The first window</h3>
             <p>
               The network deck sits under the title bar. Start with <b>Auto</b> for a healthy route,
-              or <b>None</b> for a direct connection. Open <b>Settings → Basic</b> to sign in to a
+              or <b>None</b> for a direct connection. Open <b>Settings â†’ Basic</b> to sign in to a
               provider. There is no OpenDeath account and no separate OpenDeath server.
             </p>
 
@@ -140,16 +165,32 @@
             <h2 id="recovery">Recovery controls</h2>
             <h3>Reset limit</h3>
             <p>
-              Clears the current allowance and retries the last prompt in one action. Use it when a
-              provider reports a free limit but the route itself is healthy.
+              Archives the session, rotates to a new exit IP, puts the session back, and restarts the
+              service. If the rotation fails the session is still restored, so the button can no longer
+              leave you signed out. It changes the IP, not the account's daily allowance: a new IP does
+              not refill a spent account.
+            </p>
+
+            <h3>Help</h3>
+            <p>
+              Opens the error the deck last reported and the fixes that apply to it, with copyable
+              commands for WARP registration, Linux installation and the Reset flow. <b>Copy
+              diagnostics</b> collects the version, platform, mode, last error and log path.
             </p>
 
             <h3>Auto-rotate</h3>
             <p>
               Watches for a free limit, finds another exit, verifies it, and sends <code>continue</code>
-              to every waiting chat. It makes up to 50 attempts, remembers burned exit IPs for 24 hours,
-              and stops when the route is healthy. A per-chat delay and a rotation lock prevent the
-              same limit from triggering twice.
+              to every waiting chat. It remembers burned exit IPs for 24 hours and stops when the route
+              is healthy. A per-chat delay and a rotation lock prevent the same limit from triggering
+              twice.
+            </p>
+            <p>
+              WARP rotates by generating a new tunnel key (<code>warp-cli tunnel rotate-keys</code>).
+              That changes the exit without a new Cloudflare registration, so it keeps working when a
+              new registration is refused. A redial is tried second, and a registration only once per
+              10 minutes when both fail. A 429 pauses registrations for 30 minutes and Auto moves to the
+              proxy pool instead of retrying a dead route.
             </p>
             <p>
               Auto mode tries the routes your machine can actually reach: WARP first, then the free
@@ -175,7 +216,7 @@
 
             <h2 id="personalization">Personalization</h2>
             <p>
-              <b>Settings → Personalization</b> controls the theme, background, rainbow accents, and
+              <b>Settings â†’ Personalization</b> controls the theme, background, rainbow accents, and
               text color. The default is dark. Light and system themes are available, and every color
               control keeps body text readable.
             </p>
@@ -205,7 +246,7 @@
             <h2 id="hud">The HUD editor</h2>
             <p>
               Every control on the network deck is a slot, and you own the order. Open
-              <b>Settings → HUD</b> or press <b>Edit HUD</b> on the deck itself.
+              <b>Settings â†’ HUD</b> or press <b>Edit HUD</b> on the deck itself.
             </p>
             <ul>
               <li>Drag a slot with the mouse to move it. The drop lands where the eye saw it, even
@@ -228,10 +269,10 @@
             <h2 id="data">Data, updates, and uninstall</h2>
             <p>OpenDeath keeps user data under your Windows profile:</p>
             <pre><code>%APPDATA%\dev.opendeath.desktop\
-├─ settings\        theme, routes, and preferences
-├─ pending.json     chats waiting for a new route
-├─ logs\            local diagnostics
-└─ cli\             the bundled engine version</code></pre>
+â”œâ”€ settings\        theme, routes, and preferences
+â”œâ”€ pending.json     chats waiting for a new route
+â”œâ”€ logs\            local diagnostics
+â””â”€ cli\             the bundled engine version</code></pre>
             <p class="mt-20">
               The installed app lives in <code>%LOCALAPPDATA%\Programs\OpenDeath</code> by default.
               The portable build extracts to a temporary folder each time it runs.
@@ -244,7 +285,7 @@
               your settings and waiting chats stay in your profile.
             </p>
             <p>
-              <b>Uninstall</b> from Windows Settings → Apps, or run the uninstaller in the install
+              <b>Uninstall</b> from Windows Settings â†’ Apps, or run the uninstaller in the install
               folder. It removes the app and shortcuts. Your settings and waiting chats are kept so a
               reinstall can find them; delete <code>%APPDATA%\dev.opendeath.desktop</code> to remove them
               as well.
@@ -274,7 +315,7 @@
             <h3>SmartScreen blocks the installer</h3>
             <p>
               The build is unsigned. Verify the SHA-256 against <a class="text-link" href="downloads/SHA256SUMS.txt">SHA256SUMS.txt</a>,
-              then choose <em>More info</em> → <em>Run anyway</em>. Do not run a file whose hash does not
+              then choose <em>More info</em> â†’ <em>Run anyway</em>. Do not run a file whose hash does not
               match.
             </p>
 
@@ -282,11 +323,11 @@
             <p>
               Release files are served from this host. If a download stops, resume it or start again;
               the checksum is the same. If the page cannot reach the counter, it shows the last known
-              value or the baseline of 59 rather than blocking.
+              value or the baseline of 612 rather than blocking.
             </p>
 
             <div class="btn-row mt-40">
-              <a class="btn btn-primary" href="download">Download 1.0.3</a>
+              <a class="btn btn-primary" href="download">Download 1.0.4</a>
               <a class="btn btn-ghost" href="faq">Read the FAQ</a>
             </div>
           </div>
@@ -303,7 +344,7 @@
               <span class="brand-word">Open<b>Death</b></span>
             </a>
             <p>A standalone desktop workspace from saintkyle. Built for long sessions, changing routes, and work that should not stop.</p>
-            <p class="small faint mt-12"><span data-download-count>59</span> downloads · v1.0.3</p>
+            <p class="small faint mt-12"><span data-download-count>612</span> downloads · v1.0.4</p>
           </div>
           <div class="footer-col">
             <h4>Product</h4>
@@ -321,14 +362,14 @@
           </div>
           <div class="footer-col">
             <h4>Release</h4>
-            <a href="download">Download 1.0.3</a>
+            <a href="download">Download 1.0.4</a>
             <a href="downloads/SHA256SUMS.txt">SHA-256 sums</a>
             <a href="faq">Common questions</a>
             <a href="docs#routes">Route setup</a>
           </div>
         </div>
         <div class="footer-bottom">
-          <span>© 2026 OpenDeath. All rights reserved.</span>
+          <span>Â© 2026 OpenDeath. All rights reserved.</span>
           <div class="legal">
             <span>Closed-source distribution</span>
             <span>Not affiliated with OpenCode</span>

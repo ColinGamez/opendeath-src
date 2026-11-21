@@ -37,7 +37,7 @@
           <a href="faq" aria-current="page">FAQ</a>
         </nav>
         <div class="header-meta">
-          <span class="chip">v1.0.3</span>
+          <span class="chip">v1.0.4</span>
           <a class="btn btn-primary btn-small" href="download">Download</a>
         </div>
       </div>
@@ -99,7 +99,7 @@
             <details>
               <summary>Does OpenDeath use Tor?</summary>
               <p>
-                No. Tor was removed in 1.0.3. The deck runs on WARP, your own proxy list, SOCKS5,
+                No. Tor is not included. The deck runs on WARP, your own proxy list, SOCKS5,
                 Route64, Mullvad or Windscribe, so no traffic leaves through the Tor network and
                 there is nothing extra to trust or configure.
               </p>
@@ -145,17 +145,18 @@
             <details>
               <summary>Can I rearrange the deck?</summary>
               <p>
-                Yes. <b>Settings → HUD</b>, or the <b>Edit HUD</b> button on the deck. Drag a slot,
+                Yes. <b>Settings â†’ HUD</b>, or the <b>Edit HUD</b> button on the deck. Drag a slot,
                 nudge it with the arrow buttons, or hide it with the eye. The order is saved
                 immediately and survives a restart; <b>Reset</b> restores the shipped layout.
               </p>
             </details>
 
             <details>
-              <summary>Can I run it on macOS or Linux?</summary>
+              <summary>Can I run it on Linux or macOS?</summary>
               <p>
-                This release is Windows x64 only. The network deck depends on Windows desktop clients
-                for several routes, so other platforms are not a drop-in build.
+                Linux is supported with AppImage, deb and rpm packages, plus a one-command installer that
+                also puts the <code>opendeath</code> CLI on PATH. The deck drives Cloudflare WARP through
+                <code>warp-cli</code> and falls back to the free proxy list or SOCKS5. macOS is not built.
               </p>
             </details>
 
@@ -164,7 +165,7 @@
               <p>
                 The build is unsigned, so SmartScreen cannot verify a publisher. Check the SHA-256
                 against <a class="text-link" href="downloads/SHA256SUMS.txt">SHA256SUMS.txt</a>, then
-                choose <em>More info</em> → <em>Run anyway</em>. Do not run a file whose hash does not
+                choose <em>More info</em> â†’ <em>Run anyway</em>. Do not run a file whose hash does not
                 match.
               </p>
             </details>
@@ -217,7 +218,7 @@
             <details>
               <summary>How do I uninstall it?</summary>
               <p>
-                Use Windows Settings → Apps, or run the uninstaller in the install folder. The app and
+                Use Windows Settings â†’ Apps, or run the uninstaller in the install folder. The app and
                 shortcuts are removed; your settings and waiting chats are kept. Delete
                 <code>%APPDATA%\dev.opendeath.desktop</code> to remove those as well.
               </p>
@@ -225,7 +226,7 @@
           </div>
 
           <div class="btn-row mt-40">
-            <a class="btn btn-primary" href="download">Download 1.0.3</a>
+            <a class="btn btn-primary" href="download">Download 1.0.4</a>
             <a class="btn btn-ghost" href="docs">Read the documentation</a>
           </div>
         </div>
@@ -241,7 +242,7 @@
               <span class="brand-word">Open<b>Death</b></span>
             </a>
             <p>A standalone desktop workspace from saintkyle. Built for long sessions, changing routes, and work that should not stop.</p>
-            <p class="small faint mt-12"><span data-download-count>59</span> downloads · v1.0.3</p>
+            <p class="small faint mt-12"><span data-download-count>612</span> downloads · v1.0.4</p>
           </div>
           <div class="footer-col">
             <h4>Product</h4>
@@ -266,7 +267,7 @@
           </div>
         </div>
         <div class="footer-bottom">
-          <span>© 2026 OpenDeath. All rights reserved.</span>
+          <span>Â© 2026 OpenDeath. All rights reserved.</span>
           <div class="legal">
             <span>Closed-source distribution</span>
             <span>Not affiliated with OpenCode</span>

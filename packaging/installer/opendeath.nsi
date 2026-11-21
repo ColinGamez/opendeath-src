@@ -1,4 +1,4 @@
-; OpenDeath 1.0.3 setup wizard
+; OpenDeath 1.0.4 setup wizard
 ; Installs the packaged desktop app per user, requires Cloudflare WARP first (the default route),
 ; checks for OpenCode Desktop, and optionally installs other VPN clients from their official winget packages.
 
@@ -12,7 +12,7 @@ Unicode true
 !include "x64.nsh"
 
 !define PRODUCT     "OpenDeath"
-!define VERSION     "1.0.3"
+!define VERSION     "1.0.4"
 !define PUBLISHER   "saintkyle"
 !define APPID       "dev.opendeath.desktop"
 !define APP_EXE     "opendeath.exe"
@@ -37,10 +37,10 @@ Caption "${PRODUCT} ${VERSION} Setup"
 Icon "${APP_ICON}"
 UninstallIcon "${APP_ICON}"
 
-VIProductVersion "1.0.3.0"
+VIProductVersion "1.0.4.0"
 VIAddVersionKey /LANG=1033 "ProductName"     "${PRODUCT}"
 VIAddVersionKey /LANG=1033 "ProductVersion"  "${VERSION}"
-VIAddVersionKey /LANG=1033 "FileVersion"     "1.0.3.0"
+VIAddVersionKey /LANG=1033 "FileVersion"     "1.0.4.0"
 VIAddVersionKey /LANG=1033 "FileDescription" "${PRODUCT} Setup"
 VIAddVersionKey /LANG=1033 "CompanyName"     "${PUBLISHER}"
 VIAddVersionKey /LANG=1033 "LegalCopyright"  "Copyright (C) 2026 ${PUBLISHER}"
@@ -403,6 +403,31 @@ Section "Start menu shortcut" SecStartMenu
   CreateShortCut "$SMPROGRAMS\OpenDeath\Uninstall OpenDeath.lnk" "$INSTDIR\Uninstall OpenDeath.exe"
 SectionEnd
 
+; The terminal CLI is the OpenCode engine that already ships inside the app, exposed as `opendeath`. It goes in a
+; private bin folder that is added to the user PATH, so nothing is copied a second time and an update replaces it
+; together with the app.
+Section "Command line (opendeath)" SecCli
+  CreateDirectory "$INSTDIR\bin"
+  FileOpen $0 "$INSTDIR\bin\opendeath.cmd" w
+  FileWrite $0 "@echo off$\r$\n"
+  FileWrite $0 '"$INSTDIR\resources\opencode-cli.exe" %*$\r$\n'
+  FileClose $0
+
+  ; Only append to PATH once; an upgrade must not add the same folder again. The marker also tells the uninstaller
+  ; that this installer owns that entry.
+  ReadRegStr $0 HKCU "Software\OpenDeath" "Cli"
+  ${If} $0 != "1"
+    ReadRegStr $1 HKCU "Environment" "Path"
+    ${If} $1 == ""
+      WriteRegExpandStr HKCU "Environment" "Path" "$INSTDIR\bin"
+    ${Else}
+      WriteRegExpandStr HKCU "Environment" "Path" "$1;$INSTDIR\bin"
+    ${EndIf}
+    WriteRegStr HKCU "Software\OpenDeath" "Cli" "1"
+  ${EndIf}
+  SendMessage ${HWND_BROADCAST} ${WM_SETTINGCHANGE} 0 "STR:Environment" /TIMEOUT=5000
+SectionEnd
+
 Section /o "Windscribe" SecWindscribe
   !insertmacro WingetInstall "Windscribe.Windscribe" "Windscribe"
 SectionEnd
@@ -419,6 +444,7 @@ SectionEnd
   !insertmacro MUI_DESCRIPTION_TEXT ${SecCore} "The OpenDeath desktop application, bundled OpenCode engine and uninstaller. Required."
   !insertmacro MUI_DESCRIPTION_TEXT ${SecDesktop} "Create an OpenDeath shortcut on the desktop. It launches opendeath.exe, not OpenCode."
   !insertmacro MUI_DESCRIPTION_TEXT ${SecStartMenu} "Create OpenDeath and uninstall shortcuts in the Start menu."
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecCli} "Install the opendeath terminal CLI and add it to your user PATH. It runs the same engine that ships with the app."
   !insertmacro MUI_DESCRIPTION_TEXT ${SecWarp} "Required. Install Cloudflare WARP from the official Cloudflare package. WARP is the default route and is put in place first."
   !insertmacro MUI_DESCRIPTION_TEXT ${SecWindscribe} "Install Windscribe from the official Windscribe package. Used by the Windscribe route."
   !insertmacro MUI_DESCRIPTION_TEXT ${SecMullvad} "Install Mullvad VPN from the official Mullvad package. Used by the Mullvad route."
@@ -435,6 +461,14 @@ Section "Uninstall"
   Delete "$SMPROGRAMS\OpenDeath\OpenDeath.lnk"
   Delete "$SMPROGRAMS\OpenDeath\Uninstall OpenDeath.lnk"
   RMDir "$SMPROGRAMS\OpenDeath"
+
+  ; Remove only the PATH entry this installer added. PowerShell is present on every supported Windows version and
+  ; splits the user PATH correctly even when it contains quotes or semicolon-heavy variables.
+  ReadRegStr $0 HKCU "Software\OpenDeath" "Cli"
+  ${If} $0 == "1"
+    nsExec::ExecToLog 'powershell -NoProfile -ExecutionPolicy Bypass -Command "$$p=[Environment]::GetEnvironmentVariable(''Path'',''User''); if ($$p) { $$p=(($$p -split '';'') | Where-Object { $$_ -ne ''$INSTDIR\bin'' }) -join '';''; [Environment]::SetEnvironmentVariable(''Path'',$$p,''User'') }"'
+    SendMessage ${HWND_BROADCAST} ${WM_SETTINGCHANGE} 0 "STR:Environment" /TIMEOUT=5000
+  ${EndIf}
 
   DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\OpenDeath"
   DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\App Paths\opendeath.exe"

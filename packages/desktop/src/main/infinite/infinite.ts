@@ -175,7 +175,10 @@ const normalizeChain = (value: string) =>
     .filter((mode, index, all) => MODES.includes(mode) && mode !== getMode() && all.indexOf(mode) === index)
     .join(",")
 
-const failover = () => normalizeChain(load().chain).split(",").filter((entry): entry is Mode => entry !== "")
+const failover = () =>
+  normalizeChain(load().chain)
+    .split(",")
+    .filter((entry): entry is Mode => entry !== "")
 
 const LABELS: Partial<Record<Mode, string>> = {
   WARP: "WARP",
@@ -315,7 +318,9 @@ export async function setMode(next: Mode) {
 
 function upstream() {
   const { mode, proxy } = load()
-  if (mode === "WARP") return WARP_PROXY
+  // A tunnel-mode WARP client already carries every connection: pointing the service at a proxy port that does not
+  // exist would break it, so direct is the correct answer there.
+  if (mode === "WARP") return warpTunnel ? undefined : WARP_PROXY
 
   if (mode === "PROXY") return proxy
   if (mode === "SOCKS") return `http://127.0.0.1:${SOCKS_HTTP}`
@@ -473,20 +478,44 @@ function run(file: string, args: string[], timeout = 20_000) {
 
 const warpExe = () =>
   process.platform === "win32" ? "C:\\Program Files\\Cloudflare\\Cloudflare WARP\\warp-cli.exe" : "warp-cli"
+// Linux installs warp-cli through the package manager, so it may live in /usr/bin or /usr/local/bin.
+const onPath = (file: string) =>
+  (process.env.PATH ?? "")
+    .split(path.delimiter)
+    .some((dir) => dir && existsSync(path.join(dir, file)))
+const warpInstalled = () => existsSync(warpExe()) || onPath("warp-cli")
 const warp = (...args: string[]) => run(warpExe(), ["--accept-tos", ...args])
 
-/** The exit IP seen through the WARP proxy, or undefined while WARP is not on. */
-async function trace() {
-  const res = await run("curl", ["-s", "-m", "4", "-x", WARP_PROXY, TRACE], 6000)
+// The WARP client routes everything through its tunnel. Proxy mode adds a local HTTP proxy on top; clients without
+// that mode still route fine, so a working tunnel is a working route and the service then connects directly behind it.
+let warpTunnel = false
+
+// Cloudflare throttles registrations after a burst, and that 429 is what leaves the WARP app unable to connect.
+// Re-registering is the expensive move: it gets a cooldown, and a refusal is remembered instead of retried in a loop.
+const WARP_REFUSED_MS = 30 * 60 * 1000
+const WARP_REG_MS = 10 * 60 * 1000
+let warpRefusedAt = 0
+let warpRegisteredAt = 0
+const warpRefused = () => Date.now() - warpRefusedAt < WARP_REFUSED_MS
+/** True when the last WARP connect had to use tunnel mode, so the service must go direct behind it. */
+export const warpUsesTunnel = () => warpTunnel
+const refusedMinutes = () => Math.max(1, Math.ceil((WARP_REFUSED_MS - (Date.now() - warpRefusedAt)) / 60_000))
+const THROTTLE = /429|too many|rate.?limit/i
+// `warp-cli status` exits 0 even when the daemon is down on some Linux packages; the text is the only signal.
+const WARP_DAEMON_DOWN = /unable to connect|daemon|not running|service is not|no route to host/i
+
+/** The exit IP seen through WARP: through the local proxy, or direct when the tunnel carries the traffic. */
+async function trace(tunnel = warpTunnel) {
+  const res = await run("curl", ["-s", "-m", "4", ...(tunnel ? [] : ["-x", WARP_PROXY]), TRACE], 6000)
   if (!res.ok || !/^warp=on$/m.test(res.out)) return undefined
   return { ip: /^ip=(.+)$/m.exec(res.out)?.[1], loc: /^loc=(.+)$/m.exec(res.out)?.[1] }
 }
 
 /** Polls every 400 ms for the given number of seconds, so the answer lands as soon as WARP is up. */
-async function waitProxy(seconds = 30) {
+async function waitProxy(seconds = 30, tunnel = warpTunnel) {
   for (let i = 0; i < Math.ceil((seconds * 1000) / 400); i++) {
     if (stopped()) return undefined
-    const found = await trace()
+    const found = await trace(tunnel)
     if (found?.ip) return found
     await sleep(400)
   }
@@ -498,22 +527,36 @@ type Connected = Result & { loc?: string }
 // warp-cli exits 0 for some commands while printing the failure ("Registration missing", "Unable to connect"), so
 // the text decides, not only the exit code. A missing registration is the one that leaves the WARP app unusable.
 const WARP_CLI_ERROR = /registration (?:is )?missing|not registered|unable to|error|failed|429|too many/i
+// An older client has no proxy mode at all: no point asking twice.
+const WARP_NO_PROXY = /unknown|unrecognized|not supported|no such|invalid (?:mode|argument)/i
 
 /**
- * Creates a WARP registration when there is none. Cloudflare refuses new ones for a while after many in a row (seen in
- * a live run), so it backs off and tries again; without a registration WARP has no proxy at all.
+ * A registration is only made when there is none. Three quick tries, no minute-long ramp: Cloudflare answers a burst
+ * with 429, and waiting does not make a refusal go away. Once it refuses, the client is left alone for the cooldown.
  */
-async function ensureRegistration(): Promise<boolean> {
+async function ensureRegistration(): Promise<{ ok: boolean; reason?: string }> {
+  // An existing registration keeps working while new ones are being refused: never treat the throttle as "no WARP".
   const show = await warp("registration", "show")
-  if (show.ok && /registration/i.test(show.out) && !WARP_CLI_ERROR.test(show.out)) return true
-  for (const wait of [0, 2_000, 4_000, 6_000, 8_000, 10_000]) {
-    if (stopped()) return false
+  if (show.ok && /registration/i.test(show.out) && !WARP_CLI_ERROR.test(show.out)) return { ok: true }
+  if (warpRefused()) return { ok: false, reason: `Cloudflare is throttling registrations, retry in ${refusedMinutes()} min` }
+  for (const wait of [0, 1_500, 3_000]) {
+    if (stopped()) return { ok: false, reason: "stopped" }
     await sleep(wait)
     const made = await warp("registration", "new")
-    if (made.ok && !WARP_CLI_ERROR.test(made.out) && /registration/i.test(made.out)) return true
-    if (made.ok && /success/i.test(made.out)) return true
+    if (THROTTLE.test(made.out)) {
+      warpRefusedAt = Date.now()
+      return { ok: false, reason: "Cloudflare refused a new registration (429)" }
+    }
+    if (made.ok && !WARP_CLI_ERROR.test(made.out) && /registration/i.test(made.out)) {
+      warpRegisteredAt = Date.now()
+      return { ok: true }
+    }
+    if (made.ok && /success/i.test(made.out)) {
+      warpRegisteredAt = Date.now()
+      return { ok: true }
+    }
   }
-  return false
+  return { ok: false, reason: detail(show.out) || "registration missing" }
 }
 
 /** First line of warp-cli output that says anything, so a failed connect can report the daemon's own words. */
@@ -527,78 +570,197 @@ function detail(out: string) {
 }
 
 /**
- * warp-cli is there and the daemon answers. Right after an install the service can still be starting, so Windows
- * gets a few seconds of grace; a machine without WARP answers at once and costs one failed call.
+ * warp-cli is there and the daemon answers. Right after an install, or on Linux right after `systemctl start warp-svc`,
+ * the service can still be starting, so it gets a few seconds of grace; a machine without WARP answers at once.
  */
 async function warpCliReady(seconds = 10) {
-  if ((await warp("status")).ok) return true
-  if (process.platform !== "win32" || !existsSync(warpExe())) return false
+  const status = await warp("status")
+  if (status.ok && !WARP_DAEMON_DOWN.test(status.out)) return true
+  if (!warpInstalled()) return false
   for (let i = 0; i < seconds * 2; i++) {
     await sleep(500)
-    if ((await warp("status")).ok) return true
+    const retry = await warp("status")
+    if (retry.ok && !WARP_DAEMON_DOWN.test(retry.out)) return true
   }
   return false
 }
 
-async function connect(): Promise<Connected> {
+async function connect(registered = false): Promise<Connected> {
   if (!(await warpCliReady()))
     return { ok: false, message: "warp-cli is not installed, or the Cloudflare WARP service is not running." }
   // A rotation that lost its new registration (or a fresh install) leaves WARP unable to connect: make one first.
-  if (!(await ensureRegistration()))
-    return { ok: false, message: "Could not create a WARP registration (Cloudflare is refusing new ones for now)." }
+  // A caller that just registered skips this, so the throttle never blocks a connection that already has credentials.
+  if (!registered) {
+    const reg = await ensureRegistration()
+    if (!reg.ok) {
+      return {
+        ok: false,
+        message: `WARP has no registration and Cloudflare would not issue one (${reg.reason}). Run "warp-cli --accept-tos registration new" in an elevated terminal, then Fix connection.`,
+      }
+    }
+  }
   if (stopped()) return { ok: false, message: "auto-rotate stopped: the connection was changed by hand" }
 
-  // The local proxy only exists in proxy mode, and a client already connected in tunnel mode keeps its old listener
-  // until it reconnects. Drop the connection first, set the mode and the port, then connect. Two cycles cover a
-  // daemon that kept the tunnel half-up across the mode change.
+  // Proxy mode first: the service can then point at 127.0.0.1 and rotate without a restart. A client too old to have
+  // the mode says so at once, and that answer is not retried for a second cycle.
   let notice = ""
-  for (let cycle = 0; cycle < 2; cycle++) {
+  let noProxy = false
+  for (let cycle = 0; cycle < 2 && !noProxy; cycle++) {
     if (stopped()) return { ok: false, message: "auto-rotate stopped: the connection was changed by hand" }
     await warp("disconnect")
-    await warp("mode", "proxy")
+    const mode = await warp("mode", "proxy")
+    if (WARP_NO_PROXY.test(mode.out)) noProxy = true
     const port = await warp("proxy", "port", String(WARP_PORT))
     const started = await warp("connect")
     if (!started.ok) notice = detail(started.out) || detail(port.out)
-    const found = await waitProxy(cycle === 0 ? 15 : 10)
-    if (found?.ip) return { ok: true, ip: found.ip, loc: found.loc, message: "WARP active" }
+    if (!noProxy) {
+      const found = await waitProxy(cycle === 0 ? 15 : 10, false)
+      if (found?.ip) {
+        warpTunnel = false
+        return { ok: true, ip: found.ip, loc: found.loc, message: "WARP active" }
+      }
+    }
     if (!notice) notice = detail(started.out) || detail(port.out)
-    await sleep(500)
+    await sleep(400)
   }
 
-  // Leave the machine with a usable WARP client, in the tunnel mode it was found in, instead of disconnected.
+  // Tunnel mode: no local proxy to point at, but the traffic still leaves through WARP, so the service goes direct
+  // behind the tunnel instead of reporting the deck dead.
+  await warp("disconnect")
+  await warp("mode", "warp")
+  const tunnel = await warp("connect")
+  if (!tunnel.ok) notice = detail(tunnel.out) || notice
+  const found = await waitProxy(12, true)
+  if (found?.ip) {
+    warpTunnel = true
+    return {
+      ok: true,
+      ip: found.ip,
+      loc: found.loc,
+      message: "WARP tunnel active (this client has no local proxy)",
+    }
+  }
+
+  // Leave the machine with a usable WARP client, in the mode it was found in, instead of disconnected.
+  warpTunnel = false
   await warp("mode", "warp")
   await warp("connect")
 
   return {
     ok: false,
     message: notice
-      ? `WARP did not answer on 127.0.0.1:${WARP_PORT}: ${notice}`
-      : `WARP does not answer on 127.0.0.1:${WARP_PORT}.`,
+      ? `WARP is on but no exit answers: ${notice}`
+      : `WARP does not answer${noProxy ? "" : ` on 127.0.0.1:${WARP_PORT}`}.`,
   }
 }
 
-/** A new registration gives a new exit IP; with a target country it re-registers until the exit lands there. */
-async function rotateWarp(): Promise<Result> {
-  const want = load().country
-  const tries = want ? 8 : 1
-  let last: Connected = { ok: false, message: "" }
-  for (let attempt = 1; attempt <= tries; attempt++) {
-    last = await newWarpRegistration()
-    if (!last.ok) return last
-    if (!want || last.loc?.toUpperCase() === want) return want ? { ...last, message: `${last.message} (${want}, try ${attempt})` } : last
-  }
-  return { ...last, ok: false, message: `No ${want} exit after ${tries} tries (last: ${last.loc ?? "?"}, IP ${last.ip}).` }
-}
-
-/** Same steps and waits as :reg_drop / :reg_new in the .bat. */
-async function newWarpRegistration(): Promise<Connected> {
+/**
+ * A redial: drop the connection and connect again. Most exits change without touching the registration, which is what
+ * keeps WARP usable instead of spending Cloudflare's registration budget on every click.
+ */
+async function reconnectWarp(previous?: string): Promise<Connected | undefined> {
   await warp("disconnect")
   // Requests that arrive from here on wait at the door and leave on the new IP; the ones already through it are dead.
   dropGateTunnels()
+  await warp("connect")
+  const found = await waitProxy()
+  if (!found?.ip) return undefined
+  if (previous && found.ip === previous) return undefined
+  return { ok: true, ip: found.ip, loc: found.loc, message: "WARP active" }
+}
+
+/**
+ * A new exit that spends no registration: WARP's key pair is local, and rotating it makes the edge assign a new
+ * address. Cloudflare does not rate-limit this, so "New IP" keeps working even while registrations are refused.
+ */
+async function rotateWarpKeys(previous?: string): Promise<Connected | undefined> {
+  const rotated = await warp("tunnel", "rotate-keys")
+  if (!rotated.ok) return undefined
+  // Pooled requests would otherwise leave on the old key's address.
+  dropGateTunnels()
+  const found = await waitProxy(8)
+  if (!found?.ip) return undefined
+  if (previous && found.ip === previous) return undefined
+  return { ok: true, ip: found.ip, loc: found.loc, message: "WARP active" }
+}
+
+/** A new exit IP: rotate the local key first, redial second, and re-register only on cooldown. */
+async function rotateWarp(): Promise<Result> {
+  const want = load().country
+  const matches = (result: Connected) => !want || result.loc?.toUpperCase() === want
+  let last: Connected | undefined
+
+  // Key rotation is unlimited and does not touch Cloudflare's registration API, which is what was failing with 429.
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    if (stopped()) return { ok: false, message: "auto-rotate stopped: the connection was changed by hand" }
+    const next = await rotateWarpKeys(known.WARP ?? last?.ip)
+    if (!next) break
+    last = next
+    if (matches(next))
+      return want ? { ...next, message: `${next.message} (${want}, key ${attempt})` } : next
+    await sleep(600)
+  }
+
+  // A redial moves to another edge on networks where the same key keeps its address.
+  const dialed = await reconnectWarp(known.WARP ?? last?.ip)
+  if (dialed) {
+    last = dialed
+    if (matches(dialed)) return dialed
+  }
+
+  if (warpRefused())
+    return {
+      ok: false,
+      message: `WARP gave ${last?.ip ? `a new exit (${last.ip})` : "no new exit"} but not ${want}. Cloudflare is throttling registrations for ${refusedMinutes()} more min; try Proxy.`,
+    }
+  if (Date.now() - warpRegisteredAt < WARP_REG_MS)
+    return {
+      ok: false,
+      message: `WARP kept the same exit and a new registration is on cooldown for ${Math.ceil((WARP_REG_MS - (Date.now() - warpRegisteredAt)) / 60_000)} min. Try Proxy or wait.`,
+    }
+
+  const tries = want ? 3 : 1
+  for (let attempt = 1; attempt <= tries; attempt++) {
+    last = await newWarpRegistration()
+    if (!last.ok) return last
+    if (!want || last.loc?.toUpperCase() === want)
+      return want ? { ...last, message: `${last.message} (${want}, try ${attempt})` } : last
+  }
+  return { ...last!, ok: false, message: `No ${want} exit after ${tries} tries (last: ${last?.loc ?? "?"}, IP ${last?.ip ?? "?"}).` }
+}
+
+/**
+ * The last resort: a new registration. The in-place call is tried first, because deleting the old registration and
+ * then meeting a 429 leaves the user with no WARP at all. The old one is removed only when the daemon insists it
+ * blocks the new one.
+ */
+async function newWarpRegistration(): Promise<Connected> {
+  if (warpRefused())
+    return {
+      ok: false,
+      message: `Cloudflare is throttling WARP registrations; try again in ${refusedMinutes()} min, or use Proxy.`,
+    }
+  await warp("disconnect")
+  // Requests that arrive from here on wait at the door and leave on the new IP; the ones already through it are dead.
+  dropGateTunnels()
+
+  const inPlace = await warp("registration", "new")
+  if (THROTTLE.test(inPlace.out)) {
+    warpRefusedAt = Date.now()
+    return {
+      ok: false,
+      message: "Cloudflare refused a new registration (429); the old one was kept. Rotate the key instead, or use Proxy.",
+    }
+  }
+  if (inPlace.ok && !/error|failed|unable/i.test(inPlace.out)) {
+    warpRegisteredAt = Date.now()
+    return connect(true)
+  }
+
   await warp("registration", "delete")
   // The delete returns before the daemon lets go; wait until `registration show` stops answering.
   for (let i = 0; i < 15 && (await warp("registration", "show")).ok; i++) await sleep(300)
-  return connect() // creates the new registration, with the back-off, before connecting
+  return connect() // creates the new registration before connecting
 }
 
 // --- session ------------------------------------------------------------------------------------------------------
@@ -825,7 +987,12 @@ export async function prepareMode() {
   const url = upstream()
   if (!url || (await reachable(url))) return
   // WARP can be switched back on; the others were started above.
-  if (getMode() === "WARP" && (await connect().catch(() => undefined))?.ok && (await reachable(url))) return
+  if (getMode() === "WARP") {
+    const up = await connect().catch(() => undefined)
+    // A tunnel-mode client leaves the service direct, which is already correct: there is nothing to wait for.
+    if (up?.ok && warpTunnel) return
+    if (up?.ok && (await reachable(url))) return
+  }
   // Proxy never falls back to the real IP: the door holds requests while another proxy is picked from the list.
   if (getMode() === "PROXY") {
     load().proxy = undefined
@@ -1022,7 +1189,8 @@ async function rotatableMode(): Promise<Mode> {
   if (mode !== "NONE") return mode
   if (!load().auto) return "NONE"
   autoStatus("Direct connection: bringing up a proxy so the IP can change.")
-  if ((await warp("status")).ok) {
+  // A registration throttle no longer disqualifies WARP: rotation only needs `tunnel rotate-keys`.
+  if (await warpCliReady(1)) {
     await setMode("WARP")
     return "WARP"
   }
@@ -1035,7 +1203,7 @@ const PROBE_MODEL = "opencode/deepseek-v4.1-flash-free"
 const PROBE_LIMIT = /free usage limit|rate limit|too many requests/i
 
 /** One cheap message on a throwaway session (`run --standalone` has its own server) through the current proxy. */
-export function probeIp(command: readonly string[]) {
+export function probeIp(command: readonly string[], cancelled: () => boolean = () => false) {
   return new Promise<"ok" | "limit" | "failed">((resolve) => {
     // --archived keeps the probe sessions out of the session list.
     const args = ["run", "--standalone", "--archived", "-m", PROBE_MODEL, "Reply with exactly the word: pong"]
@@ -1049,10 +1217,21 @@ export function probeIp(command: readonly string[]) {
     let err = ""
     proc.stdout.on("data", (chunk) => (out += chunk))
     proc.stderr.on("data", (chunk) => (err += chunk))
-    const timer = setTimeout(() => proc.kill(), 60_000)
-    proc.once("error", () => resolve("failed"))
-    proc.once("close", (code) => {
+    const timer = setTimeout(() => proc.kill(), 45_000)
+    // A manual action cancels the hunt; a probe that keeps running would hold the deck behind a dead IP for a minute.
+    const killer = setInterval(() => {
+      if (cancelled()) proc.kill()
+    }, 400)
+    const done = () => {
       clearTimeout(timer)
+      clearInterval(killer)
+    }
+    proc.once("error", () => {
+      done()
+      resolve("failed")
+    })
+    proc.once("close", (code) => {
+      done()
       // Only the answer that was asked for proves the IP works; only a limit text proves it is burned.
       if (code === 0 && /pong/i.test(out)) return resolve("ok")
       resolve(PROBE_LIMIT.test(err) || PROBE_LIMIT.test(out) ? "limit" : "failed")
@@ -1084,17 +1263,20 @@ async function hunt(command: readonly string[]): Promise<Result> {
   // machine without WARP, instead of failing with "pick a proxy first" while Auto already picked one.
   await rotatableMode()
   const chain = [getMode(), ...failover()]
-  if (chain.length === 1 && getMode() === "NONE")
+  if (!chain.length || (chain.length === 1 && getMode() === "NONE"))
     return { ok: false, message: "pick WARP or Proxy first (None cannot change the IP)" }
   // A dead free proxy fails the probe without being a limit, so Proxy keeps trying; elsewhere two in a row mean the probe is broken.
   const max = load().attempts
+  // The deck is locked while a hunt runs, so it gets a wall clock as well as an attempt count.
+  const deadline = Date.now() + 150_000
   const brokenMax = () => (getMode() === "PROXY" ? max : 2)
   let broken = 0
   let rotateFails = 0
   let stage = 0
   for (let attempt = 1; attempt <= max; attempt++) {
     if (huntCancelled) return { ok: false, message: "auto-rotate stopped: the connection was changed by hand" }
-    const mode = chain[stage]!
+    if (Date.now() > deadline) return { ok: false, message: "auto-rotate gave up after 2.5 min; try again or pick a mode" }
+    const mode = chain[stage] ?? getMode()
     // The fallback chain only moves on when the current mode gives nothing; a switch is one attempt less.
     if (mode !== getMode()) {
       autoStatus(`switching to ${LABELS[mode]} (${stage + 1}/${chain.length})…`)
@@ -1128,8 +1310,9 @@ async function hunt(command: readonly string[]): Promise<Result> {
     const probeStart = Date.now()
     // Two answers in a row, not one: shared WARP IPs often have a single free message left, which one probe spends,
     // and the chat's "continue" then meets the limit (seen 3 times out of 3 in a live run).
-    const first = await probeIp(command)
-    const state = first === "ok" ? await probeIp(command) : first
+    const first = await probeIp(command, () => huntCancelled)
+    if (huntCancelled) return { ok: false, message: "auto-rotate stopped: the connection was changed by hand" }
+    const state = first === "ok" ? await probeIp(command, () => huntCancelled) : first
     console.info(`[auto-rotate] try ${attempt} ${net.ip}: ${state} (probe ${((Date.now() - probeStart) / 1000).toFixed(1)}s)`)
     if (state === "ok") return { ...net, message: `${net.message} - works after ${attempt} ${attempt === 1 ? "try" : "tries"}` }
     broken = state === "failed" ? broken + 1 : 0

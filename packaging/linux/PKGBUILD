@@ -1,0 +1,60 @@
+# Maintainer: saintkyle <saintedkyle@users.noreply.github.com>
+# AUR package for OpenDeath: the Electron app plus the `opendeath` terminal CLI.
+#
+#   makepkg -si
+#
+# The release files are rebuilt for every version. Update pkgver and regenerate .SRCINFO before pushing:
+#   makepkg --printsrcinfo > .SRCINFO
+pkgname=opendeath-bin
+pkgver=1.0.4
+pkgrel=1
+pkgdesc="AI workspace with the Infinite network deck (WARP, proxy and SOCKS rotation)"
+arch=('x86_64')
+url="https://open.death.cl"
+license=('MIT')
+depends=('gtk3' 'nss' 'libxss' 'libxtst' 'xdg-utils' 'hicolor-icon-theme')
+optdepends=(
+  'cloudflare-warp-bin: Cloudflare WARP, the default route'
+  'mullvad-vpn: Mullvad server switching'
+  'windscribe-cli: Windscribe server switching'
+)
+provides=('opendeath')
+conflicts=('opendeath')
+options=('!strip' '!debug')
+source_x86_64=(
+  "OpenDeath-${pkgver}-x86_64.AppImage::https://open.death.cl/downloads/OpenDeath-${pkgver}-x86_64.AppImage"
+  "opendeath-cli-${pkgver}-linux-x64.tar.gz::https://open.death.cl/downloads/opendeath-cli-${pkgver}-linux-x64.tar.gz"
+)
+# The AppImage is the vendor artifact; pin the checksums printed by the release page when publishing the AUR update.
+sha256sums_x86_64=('SKIP' 'SKIP')
+noextract=("opendeath-cli-${pkgver}-linux-x64.tar.gz")
+
+package() {
+  install -dm0755 "$pkgdir/opt/opendeath" "$pkgdir/usr/bin" "$pkgdir/usr/share/applications"
+  install -dm0755 "$pkgdir/usr/share/icons/hicolor/512x512/apps"
+
+  install -m0755 "$srcdir/OpenDeath-${pkgver}-x86_64.AppImage" "$pkgdir/opt/opendeath/OpenDeath.AppImage"
+  ln -s /opt/opendeath/OpenDeath.AppImage "$pkgdir/usr/bin/opendeath-desktop"
+
+  # The CLI archive holds the single `opencode` executable, installed under the product name.
+  tar -xzf "$srcdir/opendeath-cli-${pkgver}-linux-x64.tar.gz" -C "$srcdir"
+  install -m0755 "$srcdir/opencode" "$pkgdir/usr/bin/opendeath"
+
+  cat > "$pkgdir/usr/share/applications/opendeath.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=OpenDeath
+Comment=AI workspace with the Infinite network deck
+Exec=/opt/opendeath/OpenDeath.AppImage %U
+Icon=opendeath
+Terminal=false
+Categories=Development;
+StartupWMClass=dev.opendeath.desktop
+EOF
+
+  # Pull the launcher icon out of the AppImage instead of shipping a second copy.
+  ( cd "$srcdir" && ./OpenDeath-${pkgver}-x86_64.AppImage --appimage-extract >/dev/null 2>&1 ) || true
+  icon="$(find "$srcdir/squashfs-root" -type f -name '*.png' -path '*512x512*' | head -n1)"
+  [ -n "$icon" ] || icon="$(find "$srcdir/squashfs-root" -type f -name '*.png' -size +10k | head -n1)"
+  [ -n "$icon" ] && install -m0644 "$icon" "$pkgdir/usr/share/icons/hicolor/512x512/apps/opendeath.png"
+}

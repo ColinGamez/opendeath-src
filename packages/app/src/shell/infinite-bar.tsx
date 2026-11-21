@@ -7,6 +7,7 @@ import { deckDensity } from "@/shell/ui-prefs"
 import { SettingsDialog } from "@/shell/settings-dialog"
 import { addHistory } from "@/shell/infinite-history"
 import { ConnectionDialog } from "@/shell/connection-dialog"
+import { HelpDialog } from "@/shell/help-dialog"
 import { fixConnection } from "@/shell/infinite-doctor"
 import {
   HUD_ITEMS,
@@ -63,6 +64,7 @@ const ITEM_NAMES: Record<HudItem, string> = {
   connection: "Connection modes",
   fix: "Fix connection",
   status: "Status",
+  help: "Help",
   resetLimit: "Reset limit",
   rotateNow: "New IP now",
   jailbreak: "Jailbreak",
@@ -318,6 +320,19 @@ export function InfiniteBar() {
         onClick={() => void dialog.show(() => <ConnectionDialog />)}
       >
         Status
+      </button>
+    ),
+    help: () => (
+      <button
+        type="button"
+        class={button}
+        disabled={hudEditing()}
+        title="What is failing right now, and the fixes that apply to it."
+        onClick={() =>
+          void dialog.show(() => <HelpDialog message={result()?.ok === false ? result()?.message : undefined} />)
+        }
+      >
+        Help
       </button>
     ),
     resetLimit: () => (

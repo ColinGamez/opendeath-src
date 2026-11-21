@@ -1,5 +1,7 @@
 import { execFile } from "node:child_process"
+import { accessSync, constants } from "node:fs"
 import { stat } from "node:fs/promises"
+import path from "node:path"
 
 // Mullvad and Windscribe are used through their own command-line tools. The app never installs them and never
 // stores an account: the user logs in once in the client, and this only switches the server.
@@ -8,10 +10,18 @@ export type Client = "MULLVAD" | "WINDSCRIBE"
 type Output = { ok: boolean; out: string }
 export type Runner = (exe: string, args: string[], timeout?: number) => Promise<Output>
 
-const exes: Record<Client, string> = {
-  MULLVAD: "C:\\Program Files\\Mullvad VPN\\resources\\mullvad.exe",
-  WINDSCRIBE: "C:\\Program Files\\Windscribe\\windscribe-cli.exe",
-}
+const exes: Record<Client, string> =
+  process.platform === "win32"
+    ? {
+        MULLVAD: "C:\\Program Files\\Mullvad VPN\\resources\\mullvad.exe",
+        WINDSCRIBE: "C:\\Program Files\\Windscribe\\windscribe-cli.exe",
+      }
+    : {
+        // Both clients install a command-line tool on Linux and macOS; Mullvad's is `mullvad`, Windscribe's is
+        // `windscribe-cli`. The app never installs them, so a missing one is reported, not downloaded.
+        MULLVAD: "/usr/bin/mullvad",
+        WINDSCRIBE: "/usr/bin/windscribe-cli",
+      }
 const names: Record<Client, string> = { MULLVAD: "Mullvad", WINDSCRIBE: "Windscribe" }
 // Mullvad country codes used when the user gives no locations.
 const MULLVAD_DEFAULT = ["se", "de", "nl", "ch", "no", "fi", "ro", "at"]
@@ -30,10 +40,23 @@ export function setRunner(next: Runner | undefined) {
 
 export const clientName = (client: Client) => names[client]
 
+/** True when the executable is found under one of the PATH entries (distro packages do not always use /usr/bin). */
+function onPath(file: string) {
+  return (process.env.PATH ?? "").split(path.delimiter).some((dir) => {
+    if (!dir) return false
+    try {
+      accessSync(path.join(dir, file), constants.X_OK)
+      return true
+    } catch {
+      return false
+    }
+  })
+}
+
 export async function installed(client: Client) {
   return stat(exes[client]).then(
     () => true,
-    () => false,
+    () => process.platform !== "win32" && onPath(path.basename(exes[client])),
   )
 }
 

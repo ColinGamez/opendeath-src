@@ -1,0 +1,27 @@
+pkgbase = opendeath-bin
+	pkgdesc = AI workspace with the Infinite network deck (WARP, proxy and SOCKS rotation)
+	pkgver = 1.0.4
+	pkgrel = 1
+	url = https://open.death.cl
+	arch = x86_64
+	license = MIT
+	depends = gtk3
+	depends = nss
+	depends = libxss
+	depends = libxtst
+	depends = xdg-utils
+	depends = hicolor-icon-theme
+	optdepends = cloudflare-warp-bin: Cloudflare WARP, the default route
+	optdepends = mullvad-vpn: Mullvad server switching
+	optdepends = windscribe-cli: Windscribe server switching
+	provides = opendeath
+	conflicts = opendeath
+	options = !strip
+	options = !debug
+	source_x86_64 = OpenDeath-1.0.4-x86_64.AppImage::https://open.death.cl/downloads/OpenDeath-1.0.4-x86_64.AppImage
+	source_x86_64 = opendeath-cli-1.0.4-linux-x64.tar.gz::https://open.death.cl/downloads/opendeath-cli-1.0.4-linux-x64.tar.gz
+	sha256sums_x86_64 = SKIP
+	sha256sums_x86_64 = SKIP
+	noextract = opendeath-cli-1.0.4-linux-x64.tar.gz
+
+pkgname = opendeath-bin

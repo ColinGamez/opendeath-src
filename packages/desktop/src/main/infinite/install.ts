@@ -1,10 +1,12 @@
 import { execFile } from "node:child_process"
+import { accessSync, constants } from "node:fs"
 import { mkdir, stat, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 
 // Installs WARP or WireGuard from their official sources, only after the user confirmed in the app.
-// Order: detect -> download -> check the Authenticode signature of the publisher -> msiexec with UAC.
+// Windows: detect -> download -> check the Authenticode signature of the publisher -> msiexec with UAC.
+// Linux: the distribution owns these packages, so the app detects the tool and gives the exact install command.
 
 export type Tool = "WARP" | "WIREGUARD"
 
@@ -31,6 +33,19 @@ const downloads = () =>
 
 async function exists(file: string) {
   return stat(file).then(() => true, () => false)
+}
+
+/** Linux and macOS find their tools through PATH; a hard path is only reliable on Windows. */
+function onPath(file: string) {
+  return (process.env.PATH ?? "").split(path.delimiter).some((dir) => {
+    if (!dir) return false
+    try {
+      accessSync(path.join(dir, file), constants.X_OK)
+      return true
+    } catch {
+      return false
+    }
+  })
 }
 
 function run(exe: string, args: string[], timeout = 600_000) {
@@ -60,8 +75,9 @@ async function wireguardUrl() {
   return `https://download.wireguard.com/windows-client/${newest.name}`
 }
 
-/** Installed means the program is there and, for WARP, its service too. */
+/** Installed means the program is there and, for WARP on Windows, its service too. */
 export async function installed(tool: Tool) {
+  if (process.platform !== "win32") return onPath(tool === "WARP" ? "warp-cli" : "wg")
   const spec = TOOLS[tool]
   if (!(await exists(spec.exe))) return false
   if (!spec.service) return true
@@ -71,8 +87,14 @@ export async function installed(tool: Tool) {
 
 /** What the app would install, for the confirmation text. Makes no change. */
 export async function plan(tool: Tool) {
-  const spec = TOOLS[tool]
   if (await installed(tool)) return { installed: true as const }
+  if (process.platform !== "win32")
+    return {
+      installed: false as const,
+      url: tool === "WARP" ? "https://pkg.cloudflareclient.com/" : "https://www.wireguard.com/install/",
+      publisher: tool === "WARP" ? "Cloudflare, Inc." : "WireGuard LLC",
+    }
+  const spec = TOOLS[tool]
   return { installed: false as const, url: await spec.url(), publisher: tool === "WARP" ? "Cloudflare, Inc." : "WireGuard LLC" }
 }
 
@@ -80,6 +102,15 @@ export async function plan(tool: Tool) {
 export async function install(tool: Tool, confirmed: boolean) {
   if (confirmed !== true) return { ok: false, message: "Installation needs your confirmation." }
   if (await installed(tool)) return { ok: true, message: `${tool} is already installed.` }
+  // A Linux desktop app must not run a root package manager on its own: the distro's command is shown in Help instead.
+  if (process.platform !== "win32")
+    return {
+      ok: false,
+      message:
+        tool === "WARP"
+          ? "On Linux, WARP comes from Cloudflare's package repository. Open Help for the one-line install for apt, dnf or pacman, then click Fix connection."
+          : "On Linux, install wireguard-tools with your package manager; route64 then works from the imported .conf.",
+    }
 
   const spec = TOOLS[tool]
   const url = await spec.url()

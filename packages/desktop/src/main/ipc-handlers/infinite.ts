@@ -21,6 +21,7 @@ import {
   resumeSession,
   rotateOnly,
   setMode,
+  warpUsesTunnel,
   setOptions,
   startWatch,
   type Result,
@@ -68,10 +69,10 @@ export const infiniteHandlers = InfiniteRpcs.toLayer(
     let running: string | undefined
     const guarded = (name: string, budget: number, body: Effect.Effect<Result, unknown>): Effect.Effect<Result> =>
       Effect.gen(function* () {
-        // A hunt asks for its stop before a manual action arrives, so the wait here is short. Twelve seconds covers a
+        // A hunt asks for its stop before a manual action arrives, so the wait here is short: four seconds covers a
         // rotation that is already mid-flight without leaving the click spinning.
         let release: (() => void) | undefined
-        for (let i = 0; i < 48; i++) {
+        for (let i = 0; i < 16; i++) {
           release = lock()
           if (release) break
           yield* Effect.sleep("250 millis")
@@ -108,6 +109,12 @@ export const infiniteHandlers = InfiniteRpcs.toLayer(
           // Leaving Route64 takes its tunnel down; leaving Mullvad or Windscribe disconnects that client.
           yield* Effect.tryPromise(() => leaveMode(previous, mode))
           const result = yield* withService(() => applyMode(mode))
+          // A client without proxy mode carries the traffic in its tunnel; the service has to restart direct behind it,
+          // because it read the proxy environment before that was known.
+          if (result.ok && mode === "WARP" && warpUsesTunnel()) {
+            yield* stopService
+            yield* startService
+          }
           if (result.ok) return result
           // A mode whose proxy never came up must not stay saved: the service would talk to a dead port and every
           // request would fail with ECONNRESET. Put the saved mode back to direct and restart the service on it.
@@ -119,19 +126,28 @@ export const infiniteHandlers = InfiniteRpcs.toLayer(
       )
     }
 
-    // "Reset limit": the session is archived while the service is stopped, then the IP is renewed.
+    // "Reset limit": archive the session, renew the IP, put the session back. A failed rotation must never leave the
+    // user signed out, which is what made this button feel broken: the archive happened, the restore never did.
     const resetFlow = () => {
       // A click wins over a running hunt, exactly like a mode change.
       cancelHunt()
       return guarded(
         "Resetting the session",
-        240_000,
+        300_000,
         Effect.gen(function* () {
           yield* stopService
           const archived = yield* Effect.tryPromise(archiveAuth)
-          const net = yield* withService(rotateOnly)
-          const note = archived ? "Session saved and removed. " : "No session found. "
-          return { ...net, message: note + net.message }
+          const net = yield* Effect.tryPromise(rotateOnly)
+          // Put the session back either way, before the service starts again, so the app is never left signed out.
+          const back = archived ? yield* Effect.tryPromise(restoreSession) : { ok: false, message: "No session found." }
+          yield* startService
+          const kept = archived ? (back.ok ? "Signed in again." : back.message) : "No session was archived."
+          return {
+            ...net,
+            message: net.ok
+              ? `Session reset on ${net.ip ?? "a new IP"}. ${kept}`
+              : `No new IP: ${net.message}. ${kept} Try Proxy, or open Help.`,
+          }
         }),
       )
     }
@@ -161,6 +177,11 @@ export const infiniteHandlers = InfiniteRpcs.toLayer(
           const cli = yield* desktopCli.resolve
           const net = yield* Effect.tryPromise(() => huntIp(cli.command))
           if (!net.ok) return net
+          // Same as a manual switch: a tunnel-mode WARP leaves the service direct, and it has to be restarted to see it.
+          if (getMode() === "WARP" && warpUsesTunnel()) {
+            yield* stopService
+            yield* startService
+          }
           // Every chat that is waiting gets "continue" on this one new IP, in parallel.
           if (sessionID) waitForIp(sessionID)
           const chats = [...pending]
@@ -240,7 +261,13 @@ export const infiniteHandlers = InfiniteRpcs.toLayer(
       InfiniteResetLimit: resetFlow,
       InfiniteRestoreSession: restoreFlow,
       // A manual click: runs even when the Auto-rotate checkbox is off, because the click itself is the intent.
-      InfiniteAutoRotate: ({ sessionID }) => Effect.sync(() => trigger("limit reached", sessionID, false, true)),
+      // The button sends no session id; the renderer always sends one. Only the button outranks a running hunt,
+      // otherwise a limit event echoed by the renderer would cancel the rotation it just asked for.
+      InfiniteAutoRotate: ({ sessionID }) =>
+        Effect.sync(() => {
+          if (!sessionID) cancelHunt()
+          trigger("limit reached", sessionID, false, true)
+        }),
       InfiniteSendPrompt: ({ sessionID, text }) =>
         Effect.promise(() =>
           promptSession(sessionID, text).then((ok) => ({

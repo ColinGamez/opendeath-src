@@ -1,8 +1,8 @@
 param(
   [Parameter(Mandatory = $true)][string]$Setup,
   [Parameter(Mandatory = $true)][string]$Portable,
-  [string]$Version = "1.0.3",
-  [string]$Previous = "1.0.2",
+  [string]$Version = "1.0.4",
+  [string]$Previous = "1.0.3",
   [string]$Base = "C:\Users\Kylem\Documents\Qoder\2026-11-17\02a21507"
 )
 
@@ -21,6 +21,10 @@ $portableName = "OpenDeath-Portable-$Version.exe"
 Copy-Item $Setup (Join-Path $release $setupName) -Force -ErrorAction SilentlyContinue
 Copy-Item $Portable (Join-Path $release $portableName) -Force -ErrorAction SilentlyContinue
 
+# Linux files are built in GitHub Actions; stage the one file this machine owns.
+$installScript = Join-Path $Base "packaging\linux\install.sh"
+if (Test-Path $installScript) { Copy-Item $installScript (Join-Path $release "install.sh") -Force }
+
 $setupInfo = Get-Item (Join-Path $release $setupName)
 $portableInfo = Get-Item (Join-Path $release $portableName)
 $setupHash = (Get-FileHash $setupInfo.FullName -Algorithm SHA256).Hash
@@ -28,6 +32,21 @@ $portableHash = (Get-FileHash $portableInfo.FullName -Algorithm SHA256).Hash
 
 $sums = "$setupHash  $setupName`r`n$portableHash  $portableName`r`n"
 [System.IO.File]::WriteAllText((Join-Path $release "SHA256SUMS.txt"), $sums, $utf8)
+
+# Linux files arrive from the GitHub Actions run. When they have been copied into release/, refresh their sums too.
+$linuxFiles = @(
+  (Join-Path $release "OpenDeath-$Version-x86_64.AppImage"),
+  (Join-Path $release "OpenDeath-$Version-amd64.deb"),
+  (Join-Path $release "OpenDeath-$Version-x86_64.rpm"),
+  (Join-Path $release "opendeath-cli-$Version-linux-x64.tar.gz"),
+  (Join-Path $release "install.sh")
+) | Where-Object { Test-Path $_ }
+if ($linuxFiles.Count -gt 0) {
+  $linuxSums = ($linuxFiles | ForEach-Object {
+    "$((Get-FileHash $_ -Algorithm SHA256).Hash.ToLower())  $(Split-Path $_ -Leaf)"
+  }) -join "`n"
+  [System.IO.File]::WriteAllText((Join-Path $release "SHA256SUMS-linux.txt"), $linuxSums + "`n", $utf8)
+}
 
 # ---- numbers for the pages ----
 function Mb([long]$bytes) { [string][Math]::Round($bytes / 1e6, 0) }

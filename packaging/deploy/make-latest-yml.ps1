@@ -1,5 +1,5 @@
 param(
-  [string]$Version = "1.0.3",
+  [string]$Version = "1.0.4",
   [string]$Setup,
   [string]$Base = "C:\Users\Kylem\Documents\Qoder\2026-11-17\02a21507"
 )

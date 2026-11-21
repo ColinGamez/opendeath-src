@@ -12,10 +12,10 @@ import posixpath
 
 import paramiko
 
-HOST = os.environ.get("OPEND_SSH_HOST", "YOUR_SERVER_IP")
+HOST = os.environ.get("OPEND_SSH_HOST", "172.255.210.162")
 USER = os.environ.get("OPEND_SSH_USER", "root")
 PASSWORD = os.environ.get("OPEND_SSH_PASSWORD", "")
-VERSION = os.environ.get("OPEND_VERSION", "1.0.3")
+VERSION = os.environ.get("OPEND_VERSION", "1.0.4")
 
 LOCAL_SITE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "website"))
 LOCAL_RELEASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "release"))
@@ -102,6 +102,24 @@ def upload_downloads(sftp):
         print(f"uploading {name} ({size:,} bytes) ...", flush=True)
         sftp.put(local, posixpath.join(remote_dir, name), callback=lambda done, total: None)
         print(f"  done {name}", flush=True)
+    # Linux files are built in GitHub Actions and may not be in this folder yet; send them when they are.
+    optional = [
+        f"OpenDeath-{VERSION}-x86_64.AppImage",
+        f"OpenDeath-{VERSION}-amd64.deb",
+        f"OpenDeath-{VERSION}-x86_64.rpm",
+        f"opendeath-cli-{VERSION}-linux-x64.tar.gz",
+        "SHA256SUMS-linux.txt",
+        "install.sh",
+    ]
+    for name in optional:
+        local = os.path.join(LOCAL_RELEASE, name)
+        if not os.path.exists(local):
+            print(f"skip {name} (not built here)", flush=True)
+            continue
+        print(f"uploading {name} ({os.path.getsize(local):,} bytes) ...", flush=True)
+        sftp.put(local, posixpath.join(remote_dir, name), callback=lambda done, total: None)
+        names.append(name)
+        print(f"  done {name}", flush=True)
     return names
 
 
@@ -119,6 +137,22 @@ def fix_permissions(client):
     print(out, err)
     if code != 0:
         raise SystemExit("nginx reload failed")
+
+
+def install_download_counter(client):
+    """Replace the server-side counter and run it once, so the site never waits a cron cycle for the new number."""
+    local = os.path.abspath(os.path.join(os.path.dirname(__file__), "update-downloads.sh"))
+    sftp = client.open_sftp()
+    try:
+        sftp.put(local, "/usr/local/bin/opendeath-downloads")
+    finally:
+        sftp.close()
+    code, out, err = run(
+        client,
+        "chmod 755 /usr/local/bin/opendeath-downloads && "
+        "/usr/local/bin/opendeath-downloads && cat /var/www/open.death.cl/downloads.json",
+    )
+    print(f"counter: {out.strip()} {err.strip()} (exit {code})")
 
 
 def main():
@@ -139,6 +173,7 @@ def main():
         finally:
             sftp.close()
         fix_permissions(client)
+        install_download_counter(client)
         code, out, err = run(client, "ls -la /var/www/open.death.cl/downloads; echo ---; date -u")
         print(out, err)
         print("DEPLOY OK")
