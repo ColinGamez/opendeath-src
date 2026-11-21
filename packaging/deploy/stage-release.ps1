@@ -69,9 +69,8 @@ foreach ($page in $pages) {
   $text = $text.Replace($Previous, $Version)
 
   # Sizes move with the binaries; only touch the values that describe the setup and portable.
-  $dash = [string][char]0x2014
-  $text = [regex]::Replace($text, "(Download setup $dash )\d+ MB", "`${1}$setupMb MB")
-  $text = [regex]::Replace($text, "(Portable $dash )\d+ MB", "`${1}$portableMb MB")
+  $text = [regex]::Replace($text, "(Download setup\s*[\u00B7\u2014\u2013-]\s*)\d+ MB", "`${1}$setupMb MB")
+  $text = [regex]::Replace($text, "(Portable\s*[\u00B7\u2014\u2013-]\s*)\d+ MB", "`${1}$portableMb MB")
   $text = [regex]::Replace(
     $text,
     "(<span>OpenDeath-Setup-$([regex]::Escape($Version))\.exe</span>\s*<span>)\d+ MB(</span>)",
