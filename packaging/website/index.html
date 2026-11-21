@@ -4,14 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>OpenDeath — The infinite, under control</title>
-    <meta name="description" content="OpenDeath is a standalone Windows desktop AI workspace with an eight-mode network deck, automatic recovery, and WARP in front. Download version 1.0.4." />
+    <meta name="description" content="OpenDeath is a standalone Windows and Linux desktop AI workspace with an eight-mode network deck, automatic recovery, and WARP in front. Download version 1.0.4." />
     <link rel="canonical" href="https://open.death.cl/" />
     <link rel="icon" href="favicon.ico?v=3" sizes="any" />
     <link rel="icon" href="assets/skull.png?v=3" type="image/png" />
     <link rel="apple-touch-icon" href="assets/skull.png?v=3" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="OpenDeath — The infinite, under control" />
-    <meta property="og:description" content="A standalone Windows desktop AI workspace with an eight-mode network deck, automatic recovery, and WARP in front." />
+    <meta property="og:description" content="A standalone Windows and Linux desktop AI workspace with an eight-mode network deck, automatic recovery, and WARP in front." />
     <meta property="og:url" content="https://open.death.cl/" />
     <meta property="og:image" content="https://open.death.cl/assets/og.png?v=3" />
     <meta name="twitter:card" content="summary_large_image" />
@@ -33,6 +33,7 @@
           <a href="/" aria-current="page">Overview</a>
           <a href="features">Features</a>
           <a href="download">Download</a>
+          <a href="download#linux">Linux</a>
           <a href="docs">Docs</a>
           <a href="faq">FAQ</a>
         </nav>
@@ -55,10 +56,11 @@
             </p>
             <div class="btn-row">
               <a class="btn btn-primary" href="downloads/OpenDeath-Setup-1.0.4.exe">Download for Windows</a>
+              <a class="btn btn-ghost" href="download#linux">Download for Linux</a>
               <a class="btn btn-ghost" href="downloads/OpenDeath-Portable-1.0.4.exe">Portable .exe</a>
             </div>
             <p class="hero-note">
-              <strong>219 MB</strong> setup · <strong>Windows 10/11</strong> · AppImage, deb, rpm on Linux · verifies OpenCode Desktop
+              <strong>219 MB</strong> setup · <strong>Windows 10/11</strong> · <strong>Linux x64</strong> · AppImage, deb, rpm · verifies OpenCode Desktop
             </p>
           </div>
 
@@ -95,7 +97,7 @@
               <span class="stat-label">Downloads</span>
             </div>
             <div class="stat">
-              <span class="stat-value">9</span>
+              <span class="stat-value">8</span>
               <span class="stat-label">Routes</span>
             </div>
             <div class="stat">
@@ -251,6 +253,7 @@
             </div>
             <p class="lede">
               The wizard checks for OpenCode Desktop, installs Cloudflare WARP first, then the app.
+              On Linux, one command installs the app and the CLI and picks the right package.
               Windscribe, Mullvad, or WireGuard are optional from their official packages.
             </p>
           </div>
@@ -282,6 +285,22 @@
                 <span>v1.0.4</span>
               </div>
             </article>
+
+            <article class="download-card wide">
+              <span class="kicker">Linux x64</span>
+              <h2>One command.</h2>
+              <p class="muted">
+                The installer detects apt, dnf, pacman or zypper, verifies every checksum, and adds the
+                <code>opendeath</code> terminal CLI. AppImage, deb and rpm are also available directly.
+              </p>
+              <pre><code>curl -fsSL https://open.death.cl/downloads/install.sh | sh</code></pre>
+              <div class="btn-row">
+                <a class="btn btn-primary" href="download#linux">Linux install guide</a>
+                <a class="btn btn-ghost" href="downloads/OpenDeath-1.0.4-x86_64.AppImage">AppImage</a>
+                <a class="btn btn-ghost" href="downloads/OpenDeath-1.0.4-amd64.deb">.deb</a>
+                <a class="btn btn-ghost" href="downloads/OpenDeath-1.0.4-x86_64.rpm">.rpm</a>
+              </div>
+            </article>
           </div>
 
           <p class="mt-20 small muted">
@@ -299,8 +318,9 @@
               <h2>What it needs.</h2>
             </div>
             <p class="lede">
-              OpenDeath installs beside OpenCode Desktop. It never launches or modifies your
-              OpenCode installation; it uses its own executable, engine, and data folder.
+              On Windows, OpenDeath installs beside OpenCode Desktop and never launches or modifies it.
+              On Linux the package is self-contained. Either way it uses its own executable, engine,
+              and data folder.
             </p>
           </div>
 
@@ -311,22 +331,23 @@
               </thead>
               <tbody>
                 <tr><td><b>Windows</b></td><td>Windows 10 22H2 or Windows 11, 64-bit</td></tr>
-                <tr><td><b>OpenCode Desktop</b></td><td>Required. The wizard checks for it and offers the official download link if it is missing.</td></tr>
+                <tr><td><b>Linux</b></td><td>64-bit x86_64 distribution; AppImage, deb or rpm</td></tr>
+                <tr><td><b>OpenCode Desktop</b></td><td>Windows only. Required there; the wizard links the official download. The Linux builds bundle their engine.</td></tr>
                 <tr><td><b>Internet</b></td><td>Model providers, sign-in, and optional dependency downloads</td></tr>
                 <tr><td><b>Disk space</b></td><td>About 1.3 GB installed</td></tr>
-                <tr><td><b>Required</b></td><td>Cloudflare WARP, installed by the wizard. Optional: Windscribe, Mullvad, WireGuard.</td></tr>
+                <tr><td><b>Required</b></td><td>Cloudflare WARP. Windows installs it in the wizard; Linux uses <code>--warp</code> or warp-cli. Optional: Windscribe, Mullvad, WireGuard.</td></tr>
               </tbody>
             </table>
           </div>
 
           <div class="steps mt-28">
             <div class="step">
-              <h3>Install OpenCode</h3>
-              <p>Use the official desktop build. The wizard will detect it in the per-user install folder or the uninstall registry.</p>
+              <h3>Install the prerequisite</h3>
+              <p>On Windows, install the official OpenCode Desktop build; the wizard detects it in the per-user folder or the uninstall registry. Linux packages bundle their engine.</p>
             </div>
             <div class="step">
-              <h3>Run the wizard</h3>
-              <p>Choose shortcuts and any VPN clients you want. Leave the rest unchecked; the app is complete without them.</p>
+              <h3>Run the installer</h3>
+              <p>Windows: run the setup wizard and choose shortcuts and VPN clients. Linux: run the one-command installer below, or use the AUR package on Arch.</p>
             </div>
             <div class="step">
               <h3>Open the deck</h3>
@@ -350,6 +371,7 @@
         </p>
         <div class="btn-row">
           <a class="btn btn-primary" href="downloads/OpenDeath-Setup-1.0.4.exe">Download for Windows</a>
+          <a class="btn btn-ghost" href="download#linux">Download for Linux</a>
           <a class="btn btn-ghost" href="downloads/OpenDeath-Portable-1.0.4.exe">Portable .exe</a>
         </div>
         <p class="hero-note"><strong>219 MB</strong> setup · no account · WARP required</p>
@@ -383,6 +405,8 @@
           </div>
           <div class="footer-col">
             <h4>Support</h4>
+            <a href="https://github.com/saintedKyle/opendeath-src">Source code</a>
+            <a href="https://github.com/saintedKyle/opendeath-src/blob/main/LICENSE">MIT license</a>
             <a href="faq">Common questions</a>
             <a href="docs">Documentation</a>
             <a href="docs#troubleshooting">Troubleshooting</a>
@@ -390,11 +414,11 @@
           </div>
         </div>
         <div class="footer-bottom">
-          <span>Â© 2026 OpenDeath. All rights reserved.</span>
+          <span>© 2026 OpenDeath · Open source under the MIT License</span>
           <div class="legal">
-            <span>Closed-source distribution</span>
+            <a href="https://github.com/saintedKyle/opendeath-src/blob/main/LICENSE">MIT License</a>
             <span>Not affiliated with OpenCode</span>
-            <span>Windows 10 / 11</span>
+            <span>Windows 10/11 · Linux x64</span>
           </div>
         </div>
       </div>

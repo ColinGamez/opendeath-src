@@ -1274,6 +1274,10 @@ hr {
   gap: 16px;
 }
 
+.download-card.wide {
+  grid-column: 1 / -1;
+}
+
 .download-card {
   position: relative;
   overflow: hidden;
