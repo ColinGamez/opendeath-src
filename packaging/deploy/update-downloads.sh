@@ -3,8 +3,9 @@
 # Install at /usr/local/bin/opendeath-downloads and run from cron every minute:
 #   * * * * * root /usr/local/bin/opendeath-downloads >/dev/null 2>&1
 #
-# The count is monotonic: a rotated access log must not make the public number go backwards. The baseline is the
-# count that predates this counter, so the first run publishes 612 plus whatever the current log holds.
+# The count is monotonic and survives log rotation. The state file stores the last published total and the
+# last access-log count. New entries are added as a delta, so truncating or rotating the log can never make the
+# public number go backwards. The baseline is the count that predates this counter.
 set -euo pipefail
 
 LOG="/var/log/nginx/opendeath-downloads.log"
@@ -17,15 +18,29 @@ if [[ -f "$LOG" ]]; then
   count=$(awk '$1 == "GET" && $2 ~ /^\/downloads\/(OpenDeath-[A-Za-z0-9._-]+\.(exe|AppImage|deb|rpm)|opendeath-cli-[0-9.]+-linux-[a-z0-9]+\.tar\.gz)$/ && $3 == "200" { n++ } END { print n + 0 }' "$LOG")
 fi
 
-total=$((BASELINE + count))
+last_total=0
+last_count=0
 mkdir -p "$(dirname "$STATE")"
 if [[ -f "$STATE" ]]; then
-  last=$(cat "$STATE" 2>/dev/null || echo 0)
-  if [[ "$last" =~ ^[0-9]+$ ]] && (( total < last )); then
-    total=$last
-  fi
+  read -r last_total last_count < "$STATE" || true
 fi
-printf '%d\n' "$total" > "$STATE"
+case "$last_total" in ''|*[!0-9]*) last_total=0 ;; esac
+case "$last_count" in ''|*[!0-9]*) last_count=0 ;; esac
+
+if (( last_total == 0 )); then
+  # First run after install or after a deliberate counter reset.
+  total=$((BASELINE + count))
+else
+  if (( count >= last_count )); then
+    total=$((last_total + count - last_count))
+  else
+    # The log was rotated or truncated; every current entry is new.
+    total=$((last_total + count))
+  fi
+  if (( total < BASELINE )); then total=$BASELINE; fi
+fi
+
+printf '%d %d\n' "$total" "$count" > "$STATE"
 
 tmp="${OUT}.tmp"
 printf '{"downloads":%d,"updated":"%s"}\n' "$total" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$tmp"

@@ -18,8 +18,12 @@ New-Item -ItemType Directory -Force -Path $release | Out-Null
 $setupName = "OpenDeath-Setup-$Version.exe"
 $portableName = "OpenDeath-Portable-$Version.exe"
 
-Copy-Item $Setup (Join-Path $release $setupName) -Force -ErrorAction SilentlyContinue
-Copy-Item $Portable (Join-Path $release $portableName) -Force -ErrorAction SilentlyContinue
+if ((Resolve-Path $Setup).Path -ne (Join-Path $release $setupName)) {
+  Copy-Item $Setup (Join-Path $release $setupName) -Force
+}
+if ((Resolve-Path $Portable).Path -ne (Join-Path $release $portableName)) {
+  Copy-Item $Portable (Join-Path $release $portableName) -Force
+}
 
 # Linux files are built in GitHub Actions; stage the one file this machine owns.
 $installScript = Join-Path $Base "packaging\linux\install.sh"
