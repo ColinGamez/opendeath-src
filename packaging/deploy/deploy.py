@@ -67,6 +67,25 @@ def ensure_remote_dir(sftp, path):
             sftp.mkdir(cur)
 
 
+def put_atomic(sftp, local, remote):
+    """Upload beside the target and rename, so a dropped connection never leaves a partial release file."""
+    folder = posixpath.dirname(remote)
+    tmp = posixpath.join(folder, "." + posixpath.basename(remote) + ".part")
+    sftp.put(local, tmp)
+    try:
+        sftp.posix_rename(tmp, remote)
+    except (IOError, AttributeError):
+        try:
+            sftp.remove(remote)
+        except IOError:
+            pass
+        sftp.rename(tmp, remote)
+    size = sftp.stat(remote).st_size
+    expected = os.path.getsize(local)
+    if size != expected:
+        raise SystemExit(f"short upload: {remote} is {size:,} bytes, expected {expected:,}")
+
+
 def upload_site(sftp):
     count = 0
     for root, dirs, files in os.walk(LOCAL_SITE):
@@ -79,7 +98,7 @@ def upload_site(sftp):
                 continue
             local = os.path.join(root, name)
             remote = posixpath.join(remote_dir, name)
-            sftp.put(local, remote)
+            put_atomic(sftp, local, remote)
             count += 1
     return count
 
@@ -100,7 +119,7 @@ def upload_downloads(sftp):
             raise SystemExit(f"missing local file: {local}")
         size = os.path.getsize(local)
         print(f"uploading {name} ({size:,} bytes) ...", flush=True)
-        sftp.put(local, posixpath.join(remote_dir, name), callback=lambda done, total: None)
+        put_atomic(sftp, local, posixpath.join(remote_dir, name))
         print(f"  done {name}", flush=True)
     # Linux files are built in GitHub Actions and may not be in this folder yet; send them when they are.
     optional = [
@@ -117,7 +136,7 @@ def upload_downloads(sftp):
             print(f"skip {name} (not built here)", flush=True)
             continue
         print(f"uploading {name} ({os.path.getsize(local):,} bytes) ...", flush=True)
-        sftp.put(local, posixpath.join(remote_dir, name), callback=lambda done, total: None)
+        put_atomic(sftp, local, posixpath.join(remote_dir, name))
         names.append(name)
         print(f"  done {name}", flush=True)
     return names
@@ -144,7 +163,7 @@ def install_download_counter(client):
     local = os.path.abspath(os.path.join(os.path.dirname(__file__), "update-downloads.sh"))
     sftp = client.open_sftp()
     try:
-        sftp.put(local, "/usr/local/bin/opendeath-downloads")
+        put_atomic(sftp, local, "/usr/local/bin/opendeath-downloads")
     finally:
         sftp.close()
     code, out, err = run(
