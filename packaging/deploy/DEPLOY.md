@@ -344,19 +344,24 @@ Tor is gone from the product, the installer and the site. WARP is the only requi
 - Mode union and MODES drop TOR; LABELS, the bar, the doctor order, the status band,
   the IPC schema, the tests and the settings hints follow. The SOCKS5 CONNECT bridge stays
   (it serves the user's own SOCKS servers) and is now named as such, not as Tor plumbing.
-- The esources/tor extra resource is removed from electron-builder.config.ts, so the
-  packaged app has no esources/tor (verified on dist\desktop\app).
+- The
+esources/tor extra resource is removed from electron-builder.config.ts, so the
+  packaged app has no
+esources/tor (verified on dist\desktop\app).
 - Hunt lock fixes: hunting/huntCancelled/stopped() live once at module top, cancelHunt()
   is exported there, waitProxy and ensureRegistration abort when stopped, connect()
   reports "auto-rotate stopped" instead of a generic failure, registration back-off is
   [0,2,4,6,8,10]s, and a /registration/i failure ends the hunt immediately instead of
-  spending two attempts. esetFlow and estoreFlow cancel a running hunt.
+  spending two attempts.
+esetFlow and
+estoreFlow cancel a running hunt.
 - Smaller binaries, since the Tor Expert Bundle is no longer inside:
   - OpenDeath-Setup-1.0.3.exe - 218,924,833 bytes, SHA-256 B5109B99F6766C5F51C19576A0E0BB0E5BE9DB8EB736A7A9E88171522B083A8B
   - OpenDeath-Portable-1.0.3.exe - 216,518,523 bytes, SHA-256 1ECF05F9AAE8AAE41FB219D4FC073B6C59769EBCF9F79C23F717024D5A18CBBF
 - latest.yml: size 218924833, SHA-512 910zuNurkQQAcgEDlHTzp9MkWsv8F9+rICEsZyAkrTweGWoCEsJNgXdyh77V8mNKBbtWit9HrlWNzA5WFxEH2Q==.
 - Site copy: index/features/docs/download/faq/404 say eight routes, WARP required, no Tor;
-  aq.html keeps one entry answering "does OpenDeath use Tor" with no.
+
+aq.html keeps one entry answering "does OpenDeath use Tor" with no.
 - Verified live: pages 200 (/404 = 404), Content-Length exact for both binaries,
   remote sha256sum matches SHA256SUMS.txt, latest.yml and SHA256SUMS.txt serve
   Cache-Control: no-store.
@@ -391,3 +396,9 @@ updater (same version is a no-op). Fresh downloads and 1.0.2-and-below installs 
 - Windows and Linux ship from the same source: AppImage, deb and rpm for Linux plus the Linux CLI
   tarball and install.sh; the AppImage is what the AUR package installs. The Linux desktop already
   carries the deck (WARP through warp-cli, SOCKS, proxy lists, Route64, Mullvad, Windscribe).
+- The explicit `opendeath upgrade` / `opendeath update` command now prints the manual download path;
+  it does not contact an upstream feed. The TUI `/update` command is gone; its binding ID was removed
+  too. `NOTICE.md` and `BUILD.md` state that updates are manual.
+- Final Windows 1.0.5 artifacts: setup 244,827,328 bytes,
+  SHA-256 45F42A647B3AAD4ED1482F2BE6FA86CD4B357ED430DF5003387D485518866AC2; portable
+  242,146,793 bytes, SHA-256 481AA9330E250430743AC1F667BBDFFFE29DE91615410A8C94E41F2AC913C884.
