@@ -158,7 +158,7 @@ def fix_permissions(client):
         raise SystemExit("nginx reload failed")
 
 
-def install_download_counter(client):
+def install_download_counter(client, reset=False):
     """Replace the server-side counter and run it once, so the site never waits a cron cycle for the new number."""
     local = os.path.abspath(os.path.join(os.path.dirname(__file__), "update-downloads.sh"))
     sftp = client.open_sftp()
@@ -166,10 +166,11 @@ def install_download_counter(client):
         put_atomic(sftp, local, "/usr/local/bin/opendeath-downloads")
     finally:
         sftp.close()
+    env = "OPEND_COUNTER_RESET=1 " if reset else ""
     code, out, err = run(
         client,
         "chmod 755 /usr/local/bin/opendeath-downloads && "
-        "/usr/local/bin/opendeath-downloads && cat /var/www/open.death.cl/downloads.json",
+        f"{env}/usr/local/bin/opendeath-downloads && cat /var/www/open.death.cl/downloads.json",
     )
     print(f"counter: {out.strip()} {err.strip()} (exit {code})")
     if code != 0:
@@ -235,7 +236,7 @@ def main():
             finally:
                 sftp.close()
             fix_permissions(client)
-            install_download_counter(client)
+            install_download_counter(client, reset)
             code, out, err = run(client, "ls -la /var/www/open.death.cl/downloads; echo ---; date -u")
             print(out, err)
             print("DEPLOY OK")
