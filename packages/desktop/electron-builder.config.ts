@@ -271,11 +271,15 @@ export function getConfig() {
           url: "https://open.death.cl/downloads/",
           channel: "latest",
         },
-        deb: { fpm: [metainfoFpm(appId), legacyDesktopEntryFpm] },
-        rpm: { packageName: "opencode", fpm: [rpmNoBuildIdLinksFpm, metainfoFpm(appId), legacyDesktopEntryFpm] },
+        deb: { packageName: "opendeath", fpm: [metainfoFpm(appId), legacyDesktopEntryFpm] },
+        rpm: { packageName: "opendeath", fpm: [rpmNoBuildIdLinksFpm, metainfoFpm(appId), legacyDesktopEntryFpm] },
         // The desktop binary is `opendeath-desktop` so the terminal command `opendeath` can belong to the CLI.
         // The .desktop entry and StartupWMClass still point at the app id, so the launcher and window match.
-        linux: { ...base.linux, executableName: "opendeath-desktop" },
+        linux: {
+          ...base.linux,
+          executableName: "opendeath-desktop",
+          maintainer: "saintkyle <saintedkyle@users.noreply.github.com>",
+        },
       }
     }
   }
