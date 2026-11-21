@@ -33,7 +33,7 @@ $counter = & curl.exe -s --max-time 30 https://open.death.cl/downloads.json 2>&1
 "counter=$counter" | Out-File $log -Append -Encoding utf8
 try {
   $counterJson = $counter | ConvertFrom-Json
-  "counter-value=$($counterJson.downloads) counter-ok=$([int]$counterJson.downloads -ge 612)" | Out-File $log -Append -Encoding utf8
+  "counter-value=$($counterJson.downloads) counter-ok=$([int]$counterJson.downloads -ge 312)" | Out-File $log -Append -Encoding utf8
 } catch {
   "counter-parse-failed" | Out-File $log -Append -Encoding utf8
 }

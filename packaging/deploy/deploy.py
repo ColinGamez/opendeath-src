@@ -171,7 +171,11 @@ def install_download_counter(client, reset=False, run_it=True):
         if code != 0:
             raise SystemExit(f"counter install failed: {err}")
         return
-    env = "OPEND_COUNTER_RESET=1 " if reset else ""
+    env = ""
+    if reset:
+        env += "OPEND_COUNTER_RESET=1 "
+    if os.environ.get("OPEND_COUNTER_FORCE_LOWER") == "1":
+        env += "OPEND_COUNTER_FORCE_LOWER=1 "
     code, out, err = run(
         client,
         "chmod 755 /usr/local/bin/opendeath-downloads && "
@@ -200,7 +204,7 @@ def resume_counter_cron(client):
 
 
 def reset_counter(client):
-    """Archive the current access log and drop the monotonic state, so the 612 baseline is the starting number."""
+    """Archive the current access log and drop the monotonic state, so the 312 baseline is the starting number."""
     code, out, err = run(
         client,
         "set -e; "

@@ -36,7 +36,7 @@ find "$SITE/downloads" -type f -exec chmod 644 {} +
 install -m 755 /root/opendeath-downloads /usr/local/bin/opendeath-downloads
 install -m 644 /root/opendeath-downloads.cron /etc/cron.d/opendeath-downloads
 
-# Start the public count at 612 plus this log: archive the old test log, then recount. The state file keeps the
+# Start the public count at 312 plus this log: archive the old test log, then recount. The state file keeps the
 # published number monotonic, so rotating or truncating this log can never make it go backwards.
 if [ -s "$LOG" ]; then
   mv "$LOG" "$LOG.pre-launch-$STAMP"

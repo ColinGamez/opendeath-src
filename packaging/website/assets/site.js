@@ -1,10 +1,10 @@
 /* OpenDeath site — live download counter, then presentation.
    The count comes from /downloads.json, which the server updates from the
-   download access log. It starts at 612 and survives redeploys and log rotation. */
+   download access log. It starts at 312 and survives redeploys and log rotation. */
 
 const COUNTER_URL = "/downloads.json"
-const BASELINE = 612
-const CACHE_KEY = "opendeath.downloads.v3"
+const BASELINE = 312
+const CACHE_KEY = "opendeath.downloads.v4"
 
 function format(value) {
   return new Intl.NumberFormat("en-US").format(value)

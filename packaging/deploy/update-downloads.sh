@@ -11,7 +11,7 @@ set -euo pipefail
 LOG="${OPEND_DOWNLOAD_LOG:-/var/log/nginx/opendeath-downloads.log}"
 OUT="${OPEND_DOWNLOAD_JSON:-/var/www/open.death.cl/downloads.json}"
 STATE="${OPEND_DOWNLOAD_STATE:-/var/lib/opendeath/downloads.last}"
-BASELINE=612
+BASELINE=312
 
 count=0
 if [[ -f "$LOG" ]]; then
@@ -51,8 +51,9 @@ else
 fi
 
 # Hard floors: the baseline and whatever number is already public. Neither can ever be crossed downwards.
+# OPEND_COUNTER_FORCE_LOWER=1 is only for a deliberate, one-time correction of the published number.
 if (( total < BASELINE )); then total=$BASELINE; fi
-if (( total < published )); then total=$published; fi
+if [[ "${OPEND_COUNTER_FORCE_LOWER:-0}" != "1" ]] && (( total < published )); then total=$published; fi
 
 printf '%d %d\n' "$total" "$count" > "$STATE"
 
