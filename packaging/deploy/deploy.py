@@ -153,30 +153,76 @@ def install_download_counter(client):
         "/usr/local/bin/opendeath-downloads && cat /var/www/open.death.cl/downloads.json",
     )
     print(f"counter: {out.strip()} {err.strip()} (exit {code})")
+    if code != 0:
+        raise SystemExit("counter install failed")
+
+
+def pause_counter_cron(client):
+    """Keep the old counter from writing 59 while the new baseline is being deployed."""
+    run(
+        client,
+        "if [ -f /etc/cron.d/opendeath-downloads ]; then "
+        "mv -f /etc/cron.d/opendeath-downloads /root/opendeath-downloads.cron.off; fi",
+    )
+
+
+def resume_counter_cron(client):
+    run(
+        client,
+        "if [ -f /root/opendeath-downloads.cron.off ]; then "
+        "mv -f /root/opendeath-downloads.cron.off /etc/cron.d/opendeath-downloads; fi",
+    )
+
+
+def reset_counter(client):
+    """Archive the current access log and drop the monotonic state, so the 612 baseline is the starting number."""
+    code, out, err = run(
+        client,
+        "set -e; "
+        "LOG=/var/log/nginx/opendeath-downloads.log; "
+        "STAMP=$(date -u +%Y%m%dT%H%M%SZ); "
+        'if [ -s "$LOG" ]; then mv "$LOG" "$LOG.pre-1.0.4-$STAMP"; fi; '
+        ': > "$LOG"; '
+        'chown www-data:www-data "$LOG" 2>/dev/null || true; '
+        'chmod 644 "$LOG"; '
+        "rm -f /var/lib/opendeath/downloads.last; "
+        "echo COUNTER RESET",
+    )
+    print(f"counter reset: {out.strip()} {err.strip()} (exit {code})")
+    if code != 0:
+        raise SystemExit("counter reset failed")
 
 
 def main():
     mode = sys.argv[1] if len(sys.argv) > 1 else "check"
+    reset = os.environ.get("OPEND_RESET_COUNTER") == "1"
     client = connect()
     try:
         if mode == "check":
             check(client)
             return
-        sftp = client.open_sftp()
+        if reset:
+            pause_counter_cron(client)
+            reset_counter(client)
         try:
-            print("uploading site files ...", flush=True)
-            n = upload_site(sftp)
-            print(f"site files uploaded: {n}", flush=True)
-            if mode != "site":
-                print("uploading release files ...", flush=True)
-                upload_downloads(sftp)
+            sftp = client.open_sftp()
+            try:
+                print("uploading site files ...", flush=True)
+                n = upload_site(sftp)
+                print(f"site files uploaded: {n}", flush=True)
+                if mode != "site":
+                    print("uploading release files ...", flush=True)
+                    upload_downloads(sftp)
+            finally:
+                sftp.close()
+            fix_permissions(client)
+            install_download_counter(client)
+            code, out, err = run(client, "ls -la /var/www/open.death.cl/downloads; echo ---; date -u")
+            print(out, err)
+            print("DEPLOY OK")
         finally:
-            sftp.close()
-        fix_permissions(client)
-        install_download_counter(client)
-        code, out, err = run(client, "ls -la /var/www/open.death.cl/downloads; echo ---; date -u")
-        print(out, err)
-        print("DEPLOY OK")
+            if reset:
+                resume_counter_cron(client)
     finally:
         client.close()
 

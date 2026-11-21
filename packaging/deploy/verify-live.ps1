@@ -31,6 +31,12 @@ $pageHtml = & curl.exe -s --max-time 30 https://open.death.cl/ 2>&1 | Out-String
 
 $counter = & curl.exe -s --max-time 30 https://open.death.cl/downloads.json 2>&1 | Out-String
 "counter=$counter" | Out-File $log -Append -Encoding utf8
+try {
+  $counterJson = $counter | ConvertFrom-Json
+  "counter-value=$($counterJson.downloads) counter-ok=$([int]$counterJson.downloads -ge 612)" | Out-File $log -Append -Encoding utf8
+} catch {
+  "counter-parse-failed" | Out-File $log -Append -Encoding utf8
+}
 
 $sums = & curl.exe -s --max-time 30 https://open.death.cl/downloads/SHA256SUMS.txt 2>&1 | Out-String
 $sums | Out-File $log -Append -Encoding utf8

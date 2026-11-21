@@ -39,8 +39,7 @@ have() { command -v "$1" >/dev/null 2>&1; }
 
 case "$(uname -m)" in
   x86_64|amd64) ARCH=x64; DEB=amd64; RPM=x86_64; IMG=x86_64 ;;
-  aarch64|arm64) ARCH=arm64; DEB=arm64; RPM=aarch64; IMG=aarch64 ;;
-  *) die "Unsupported CPU architecture: $(uname -m). Use the AppImage on x86_64 or arm64." ;;
+  *) die "OpenDeath 1.0.4 is built for x86_64 Linux; this machine is $(uname -m)." ;;
 esac
 
 # Root when possible, per-user when not. A piped installer must never leave a half-installed system package behind.
