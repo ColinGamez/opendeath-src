@@ -59,7 +59,7 @@ export default Runtime.handler(Commands, (input) =>
         catch: (cause) => new Error(errorMessage(cause)),
       })) !== undefined
     // opendeath: no automatic update checks. The desktop and the terminal both stay on the version the user
-    // installed; upgrading is an explicit download or `opendeath upgrade`.
+    // installed; `opendeath upgrade` only points at the manual download.
     preflight.loading()
     const config = yield* Config.Service
     const npm = yield* Npm.Service

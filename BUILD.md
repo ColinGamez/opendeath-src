@@ -96,5 +96,7 @@ exactly that).
   Proxy, SOCKS5 and None need nothing else.
 - The app is unsigned in this tree. A signed release needs your own certificate; `signtool.exe`
   is picked up by electron-builder when `CSC_LINK` and `CSC_KEY_PASSWORD` are set.
-- Auto-update reads `latest.yml` from the generic provider in `app-update.yml`. A build with the
-  same version as the feed will not update itself; bump the version to roll one out.
+- Updates are manual. A build never contacts an update feed: there is no launch check, background
+  download, or restart prompt. New builds are downloaded from the site and installed over the
+  current version. `latest.yml` in the download folder stays frozen at 1.0.4 so pre-1.0.5 builds
+  do not see a new version.

@@ -368,8 +368,8 @@ updater (same version is a no-op). Fresh downloads and 1.0.2-and-below installs 
 - The desktop now exposes the network deck to the terminal on a loopback-only control port
   (infinite-control.json in the app's user-data folder, 0600, bearer token, Origin rejected).
   Every request runs the same guarded flow as the window: status, check, fix, reset, rotate, route.
-- New opendeath commands: status [--check] [--json], ix, eset, otate, and
-  oute [WARP|PROXY|SOCKS|ROUTE64|MULLVAD|WINDSCRIBE|NONE]. They refuse with a clear message when
+- New opendeath commands: status [--check] [--json], fix, reset, rotate, and
+  route [WARP|PROXY|SOCKS|ROUTE64|MULLVAD|WINDSCRIBE|NONE]. They refuse with a clear message when
   the desktop is not running; the deck lives in the app process.
 - The TUI gets the same actions as slash commands: /deck (aliases /net, /network), /fix
   (/fix-connection), /reset (/reset-limit), /rotate, and /route [mode].

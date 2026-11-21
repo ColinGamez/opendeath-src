@@ -23,7 +23,7 @@ Added:
 - **The connection doctor** — tries the routes that actually work on the machine, WARP first.
 - **Desktop shell work** — status band, HUD editor with drag-and-drop layout, settings tabs,
   themes and accents.
-- **The Windows release pipeline** — NSIS setup script, portable build, generic auto-update feed.
+- **The Windows release pipeline** — NSIS setup script, portable build, and a manual download channel.
 
 Removed:
 
@@ -32,8 +32,10 @@ Removed:
 
 Changed:
 
-- **Auto-update** uses a generic provider at `https://open.death.cl/downloads/`, checks at launch
-  and every ten minutes, downloads in the background, and asks once before restarting.
+- **Updates are manual.** There is no launch check, background download, update feed, restart prompt,
+  or `/update` UI. A new build is downloaded from `https://open.death.cl/download` and installed
+  over the current version; settings and chats stay in the profile. The Windows setup refuses
+  silent `/S` installs and never launches OpenDeath by itself.
 - **WARP is required** and is installed by the setup wizard before the app starts.
 
 ## Third-party components

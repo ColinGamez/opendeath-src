@@ -2,7 +2,6 @@ import { Argument, Flag, GlobalFlag } from "effect/cli"
 import { Schema } from "effect"
 import { CliFlag } from "../framework/flag"
 import { Spec } from "../framework/spec"
-import { Updater } from "../services/updater"
 
 export const PrintLogs = GlobalFlag.Setting("print-logs")({
   flag: Flag.Boolean("print-logs").pipe(
@@ -69,19 +68,8 @@ const Root = Spec.make(typeof OPENCODE_CLI_NAME === "string" ? OPENCODE_CLI_NAME
   },
   commands: [
     Spec.make("upgrade", {
-      description: "Upgrade OpenDeath to the latest or a specific version",
+      description: "Show how to update OpenDeath manually",
       aliases: ["update"],
-      params: {
-        target: Argument.String("target").pipe(
-          Argument.withDescription("Version to upgrade to (with or without a leading v)"),
-          Argument.optional,
-        ),
-        method: Flag.Literals("method", Updater.methods).pipe(
-          Flag.withAlias("m"),
-          Flag.withDescription("Installation method to use"),
-          Flag.optional,
-        ),
-      },
     }),
     Spec.make("uninstall", {
       description: "Uninstall OpenDeath, keeping session data, configuration, and state",
