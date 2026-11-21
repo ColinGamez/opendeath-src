@@ -120,7 +120,7 @@ ssh root@YOUR_SERVER_IP 'chown -R www-data:www-data /var/www/open.death.cl && ng
 Do not use `--delete` on the `downloads/` directory; the release binaries and counter live there.
 
 When you change `site.css` or `site.js`, bump the `?v=` query on every page (currently
-`?v=2`). `/assets/` is cached for seven days, so the version is what makes existing visitors
+`?v=3`). `/assets/` is cached for seven days, so the version is what makes existing visitors
 pick up the new styles instead of the previous cached copy.
 
 ## 7. Rollback
