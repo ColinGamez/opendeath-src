@@ -46,7 +46,7 @@
           <a href="faq">FAQ</a>
         </nav>
         <div class="header-meta">
-          <span class="chip">v1.0.4</span>
+          <span class="chip">v1.0.5</span>
           <a class="btn btn-primary btn-small" href="download">Download</a>
         </div>
       </div>
@@ -79,7 +79,7 @@
               <li><a href="#troubleshooting">Troubleshooting</a></li>
               <li><a href="#license">License</a></li>
             </ul>
-            <a class="docs-nav-cta" href="download">Download 1.0.4 <span aria-hidden="true">&darr;</span></a>
+            <a class="docs-nav-cta" href="download">Download 1.0.5 <span aria-hidden="true">&darr;</span></a>
           </aside>
 
           <div class="prose docs-body">
@@ -100,7 +100,7 @@
             <h2 id="install">Install and first launch</h2>
             <h3>With the setup wizard</h3>
             <ol>
-              <li>Download and verify <code>OpenDeath-Setup-1.0.4.exe</code> against <a class="text-link" href="downloads/SHA256SUMS.txt">SHA256SUMS.txt</a>.</li>
+              <li>Download and verify <code>OpenDeath-Setup-1.0.5.exe</code> against <a class="text-link" href="downloads/SHA256SUMS.txt">SHA256SUMS.txt</a>.</li>
               <li>Run the wizard. It installs Cloudflare WARP first, then checks for OpenCode Desktop, before it copies anything.</li>
               <li>Choose a destination, shortcuts, and any optional VPN clients you want. WARP is required.</li>
               <li>Finish the wizard and launch OpenDeath from the new shortcut.</li>
@@ -108,7 +108,7 @@
 
             <h3>With the portable build</h3>
             <p>
-              Put <code>OpenDeath-Portable-1.0.4.exe</code> in a folder you control and run it. It
+              Put <code>OpenDeath-Portable-1.0.5.exe</code> in a folder you control and run it. It
               extracts to a temporary folder and leaves no shortcuts. Settings still live in your
               Windows profile, so moving the executable does not lose them.
             </p>
@@ -137,6 +137,22 @@
               <code>opendeath</code> works in a new terminal. On Linux the installer places the same
               engine at <code>/usr/local/bin/opendeath</code>. Run <code>opendeath --help</code> for the
               commands; <code>opendeath run</code> is the non-interactive form.
+            </p>
+            <p>
+              The network deck is also in the terminal. Start OpenDeath first: the deck commands reach
+              the running app over a loopback-only, token-protected port and use the same guarded flows
+              as the window buttons.
+            </p>
+            <pre><code>opendeath status          # route, auto-rotate, waiting chats; --check tests the exit IP
+opendeath fix             # find a working route (the desktop's Fix connection)
+opendeath reset           # renew the IP and restore the session (Reset limit)
+opendeath rotate          # change the IP, keep the session
+opendeath route           # show the route
+opendeath route WARP      # or PROXY, SOCKS, ROUTE64, MULLVAD, WINDSCRIBE, NONE</code></pre>
+            <p>
+              Add <code>--json</code> to any deck command for a script-friendly result. In the TUI the
+              same actions are slash commands: <code>/deck</code>, <code>/fix</code>, <code>/reset</code>,
+              <code>/rotate</code>, and <code>/route</code>.
             </p>
 
             <h3>The first window</h3>
@@ -293,11 +309,15 @@
               The portable build extracts to a temporary folder each time it runs.
             </p>
             <p>
-              <b>Updates are automatic.</b> The app checks once at launch and every ten minutes,
-              downloads a new build in the background, and asks before it restarts into it. The app
-              menu also has <b>Check for updates</b>. The portable build does not update itself;
-              replace it from the <a class="text-link" href="download">download page</a>. Either way,
-              your settings and waiting chats stay in your profile.
+              <b>Updates are manual.</b> OpenDeath never checks for, downloads, or installs an update by
+              itself: no launch check, no background download, no update feed. When a new build ships,
+              download it from the <a class="text-link" href="download">download page</a> and install it
+              over the old one. Your settings and waiting chats stay in your profile.
+            </p>
+            <p>
+              <b>The setup is interactive.</b> Run it yourself and follow the wizard; it refuses silent
+              installs (<code>/S</code>) and never launches itself from an update. Setup may install
+              Cloudflare WARP for the required default route after showing it on the prerequisites page.
             </p>
             <p>
               <b>Uninstall</b> from Windows Settings → Apps, or run the uninstaller in the install
@@ -353,7 +373,7 @@
             </p>
 
             <div class="btn-row mt-40">
-              <a class="btn btn-primary" href="download">Download 1.0.4</a>
+              <a class="btn btn-primary" href="download">Download 1.0.5</a>
               <a class="btn btn-ghost" href="faq">Read the FAQ</a>
             </div>
           </div>
@@ -370,7 +390,7 @@
               <span class="brand-word">Open<b>Death</b></span>
             </a>
             <p>A standalone desktop workspace from saintkyle. Built for long sessions, changing routes, and work that should not stop.</p>
-            <p class="small faint mt-12"><span data-download-count>312</span> downloads · v1.0.4</p>
+            <p class="small faint mt-12"><span data-download-count>312</span> downloads · v1.0.5</p>
           </div>
           <div class="footer-col">
             <h4>Product</h4>
@@ -388,7 +408,7 @@
           </div>
           <div class="footer-col">
             <h4>Release</h4>
-            <a href="download">Download 1.0.4</a>
+            <a href="download">Download 1.0.5</a>
             <a href="downloads/SHA256SUMS.txt">SHA-256 sums</a>
             <a href="faq">Common questions</a>
             <a href="docs#routes">Route setup</a>

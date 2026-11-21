@@ -126,38 +126,8 @@ const setup: Plugin.MainSetup = async (ctx) => {
     }),
   )
 
-  // Automatic update: the machine checks and downloads on its own once the first window is up, then every ten
-  // minutes. This poll only surfaces the restart prompt when a download has actually landed, so the one thing the
-  // user is asked is whether to restart into it. "Later" ends the prompt for this session; the next launch asks again.
-  const autoCheck = Effect.gen(function* () {
-    while (true) {
-      yield* Effect.sleep("30 seconds")
-
-      const state = updater.state()
-      if (state.status !== "ready") continue
-
-      const response = yield* promise(() =>
-        dialog.showMessageBox({
-          type: "info",
-          message: ctx.t("dialog.ready.message", { version: state.version }),
-          title: ctx.t("dialog.ready.title"),
-          buttons: [ctx.t("dialog.restart"), ctx.t("dialog.later")],
-          defaultId: 0,
-          cancelId: 1,
-        }),
-      )
-
-      // A failed install returns the updater to ready, so the retry stays in the menu.
-      if (response.response === 0)
-        yield* updater.install.pipe(
-          Effect.catch((error) => Effect.logWarning("update install failed", { message: error.message })),
-        )
-
-      return
-    }
-  })
-
-  runFork(autoCheck)
+  // opendeath: no automatic update loop and no restart prompt. This plugin is not registered in main.ts, so an
+  // installed app never checks or downloads an update by itself; updates come from the download page.
 }
 
 function promise<A>(evaluate: () => Promise<A>) {

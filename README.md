@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://open.death.cl">open.death.cl</a> ·
-  <b>1.0.4</b> ·
+  <b>1.0.5</b> ·
   MIT
 </p>
 
@@ -45,6 +45,11 @@ relaunch resumes them and sends `continue` once a new route is ready. **Help** s
 with the fixes and copyable commands for it. The doctor tries what actually works on this machine
 instead of asking questions.
 
+**The deck in the terminal.** The bundled `opendeath` CLI reaches the running desktop over a
+loopback-only control port and uses the same guarded flows as the window: `opendeath status`,
+`fix`, `reset`, `rotate`, and `route [mode]`. The TUI has the same actions as `/deck`, `/fix`,
+`/reset`, `/rotate`, and `/route`. `--json` is available on every deck command for scripts.
+
 WARP rotation uses `warp-cli tunnel rotate-keys`: a new local key makes Cloudflare hand out a new
 exit without a new registration, so the "does not accept new ones for now" rate limit no longer
 stops **New IP**. A redial is next, and a registration only once per ten minutes when both fail.
@@ -58,8 +63,8 @@ Download from [open.death.cl](https://open.death.cl/download):
 
 Windows:
 
-- `OpenDeath-Setup-1.0.4.exe` - guided per-user install, shortcuts, uninstaller, optional `opendeath` CLI
-- `OpenDeath-Portable-1.0.4.exe` - single file, runs from any folder
+- `OpenDeath-Setup-1.0.5.exe` - guided per-user install, shortcuts, uninstaller, optional `opendeath` CLI
+- `OpenDeath-Portable-1.0.5.exe` - single file, runs from any folder
 
 Linux, one command (AppImage, deb or rpm chosen from `/etc/os-release`, plus the CLI):
 
@@ -77,9 +82,11 @@ needed on Windows. Cloudflare WARP is the one required dependency; on Linux the 
 it, and the app detects an existing `warp-cli`. WireGuard, Mullvad and Windscribe are optional,
 only for the route you actually use.
 
-Installed builds check for updates at launch and every ten minutes after that, download in the
-background, and ask once to restart. Portable builds do not self-update - replace the file. Linux
-packages are built by `.github/workflows/linux.yml` and attached to the release.
+OpenDeath does not update itself. There is no launch check, background download, update feed, or
+restart prompt: a new build is a manual download from the site, installed over the current one.
+The Windows setup is interactive and refuses silent `/S` installs, so OpenDeath is only installed
+by a person running the wizard. Settings and chats stay in the profile. Linux packages are built by
+`.github/workflows/linux.yml` and attached to the release.
 
 ## Build from source
 
@@ -111,9 +118,9 @@ nothing is stored in the tree.
 ## Layout
 
 ```
-packages\desktop\      Electron shell: main process, preload, renderer, updater
+packages\desktop\      Electron shell: main process, preload, renderer, network deck
 packages\app\          The workspace UI (Solid): sessions, deck, doctor, settings
-packages\gui-plugins\  GUI plugin host, including the auto-updater
+packages\gui-plugins\  GUI plugin host and built-in plugins
 packages\core\         Engine, providers, tools
 packaging\installer\   NSIS setup script
 packaging\linux\       Linux installer, AUR PKGBUILD

@@ -363,3 +363,31 @@ Tor is gone from the product, the installer and the site. WARP is the only requi
 
 Note: the version stays 1.0.3, so an installed 1.0.3 will not pull this build through the
 updater (same version is a no-op). Fresh downloads and 1.0.2-and-below installs get it.
+## 14. 1.0.5: terminal deck controls, manual updates only (2026-11-21)
+
+- The desktop now exposes the network deck to the terminal on a loopback-only control port
+  (infinite-control.json in the app's user-data folder, 0600, bearer token, Origin rejected).
+  Every request runs the same guarded flow as the window: status, check, fix, reset, rotate, route.
+- New opendeath commands: status [--check] [--json], ix, eset, otate, and
+  oute [WARP|PROXY|SOCKS|ROUTE64|MULLVAD|WINDSCRIBE|NONE]. They refuse with a clear message when
+  the desktop is not running; the deck lives in the app process.
+- The TUI gets the same actions as slash commands: /deck (aliases /net, /network), /fix
+  (/fix-connection), /reset (/reset-limit), /rotate, and /route [mode].
+- Product branding in the terminal is OpenDeath everywhere it is the product: the CLI root name and
+  description, the TUI wordmark (open muted, death full strength), splash/epilogue, crash screen,
+  update dialogs, terminal title, and docs link. Provider names such as OpenCode Go and OpenCode Zen
+  are left unchanged because they name a service, not this app.
+- Automatic updates are removed. The updater plugin is no longer registered in the desktop, the TUI
+  no longer receives an update source or runs a background check, and the CLI no longer checks every
+  ten minutes. Nothing contacts an update feed on its own: a new build is a manual download, and a
+  reinstall keeps settings and chats.
+- The packaging no longer carries a feed either: `publish` is gone from `electron-builder.config.ts`,
+  `pack.ts` no longer writes `resources/app-update.yml`, and the prod payload was verified without
+  that file. No 1.0.5 `latest.yml` is published; the site keeps the existing 1.0.4 feed only so
+  pre-1.0.5 builds do not see a new version.
+- The Windows setup refuses silent installs: `/S` restores the wizard, shows a refusal, and aborts.
+  The `.onInstSuccess` auto-launch is gone, so setup never starts OpenDeath by itself. The WARP
+  prerequisite install is unchanged: setup still installs WARP first when it is missing.
+- Windows and Linux ship from the same source: AppImage, deb and rpm for Linux plus the Linux CLI
+  tarball and install.sh; the AppImage is what the AUR package installs. The Linux desktop already
+  carries the deck (WARP through warp-cli, SOCKS, proxy lists, Route64, Mullvad, Windscribe).

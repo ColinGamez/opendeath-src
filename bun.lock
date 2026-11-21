@@ -281,7 +281,7 @@
     },
     "packages/desktop": {
       "name": "@opencode/desktop",
-      "version": "1.0.0",
+      "version": "1.0.5",
       "dependencies": {
         "@zip.js/zip.js": "2.7.62",
         "electron-context-menu": "5.0.0",
@@ -300,6 +300,7 @@
         "@opencode/plugin": "workspace:*",
         "@opencode/schema": "workspace:*",
         "@opencode/ui": "workspace:*",
+        "@opencode/util": "workspace:*",
         "@sentry/solid": "catalog:",
         "@solidjs/router": "catalog:",
         "@types/bun": "catalog:",

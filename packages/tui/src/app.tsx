@@ -90,6 +90,7 @@ import { FrecencyProvider } from "./prompt/frecency"
 import { PromptStashProvider } from "./prompt/stash"
 import { Toast, ToastProvider, useToast } from "./ui/toast"
 import { isFallbackTitle } from "@opencode/util/session-title-fallback"
+import { callControl, MODES, type Result, type Status } from "@opencode/util/opendeath-control"
 import * as Model from "./util/model"
 import { ArgsProvider, useArgs, type Args } from "./context/args"
 import { openUrl } from "@opencode/util/open"
@@ -640,14 +641,14 @@ function App() {
     if (!terminalTitleEnabled()) return
 
     if (route.data.type === "home") {
-      setTerminalTitle(renderer, "OpenCode")
+      setTerminalTitle(renderer, "OpenDeath")
       return
     }
 
     if (route.data.type === "session") {
       const title = session?.title
       if (!title || isFallbackTitle(title)) {
-        setTerminalTitle(renderer, "OpenCode")
+        setTerminalTitle(renderer, "OpenDeath")
         return
       }
 
@@ -1059,11 +1060,113 @@ function App() {
         },
         category: "System",
       },
+      // The network deck, from the terminal. Same loopback control port the `opendeath` CLI uses, so the desktop
+      // app must be running; every action goes through the same guarded flow as the window buttons.
+      {
+        name: "opendeath.deck",
+        title: "Network deck status",
+        slash: { name: "deck", aliases: ["net", "network"] },
+        run: async () => {
+          dialog.clear()
+          const status = await callControl<Status>("/status", { timeoutMs: 15_000 }).catch((error) => {
+            toast.error(error)
+            return undefined
+          })
+          if (!status) return
+          toast.show({
+            variant: status.busy ? "info" : "success",
+            message: `Route ${status.mode} · auto ${status.auto ? "on" : "off"} · ${status.waiting} waiting · ${status.busy ?? "idle"}`,
+            duration: 8000,
+          })
+        },
+        category: "Network",
+      },
+      {
+        name: "opendeath.fix",
+        title: "Fix connection",
+        slash: { name: "fix", aliases: ["fix-connection"] },
+        run: async () => {
+          dialog.clear()
+          toast.show({ variant: "info", message: "Finding a working route…", duration: 600_000 })
+          await callControl<Result>("/fix", { method: "POST", timeoutMs: 600_000 })
+            .then((result) => toast.show({ variant: result.ok ? "success" : "error", message: result.message }))
+            .catch(toast.error)
+        },
+        category: "Network",
+      },
+      {
+        name: "opendeath.reset",
+        title: "Reset limit",
+        slash: { name: "reset", aliases: ["reset-limit"] },
+        run: async () => {
+          dialog.clear()
+          toast.show({ variant: "info", message: "Renewing the IP and restoring the session…", duration: 330_000 })
+          await callControl<Result>("/reset", { method: "POST", timeoutMs: 330_000 })
+            .then((result) =>
+              toast.show({
+                variant: result.ok ? "success" : "error",
+                message: result.ip ? `${result.message} (${result.ip})` : result.message,
+              }),
+            )
+            .catch(toast.error)
+        },
+        category: "Network",
+      },
+      {
+        name: "opendeath.rotate",
+        title: "Change IP",
+        slash: { name: "rotate" },
+        run: async () => {
+          dialog.clear()
+          toast.show({ variant: "info", message: "Changing the network IP…", duration: 200_000 })
+          await callControl<Result>("/rotate", { method: "POST", timeoutMs: 200_000 })
+            .then((result) =>
+              toast.show({
+                variant: result.ok ? "success" : "error",
+                message: result.ip ? `${result.message} (${result.ip})` : result.message,
+              }),
+            )
+            .catch(toast.error)
+        },
+        category: "Network",
+      },
+      {
+        name: "opendeath.route",
+        title: "Show or switch route",
+        slash: { name: "route", arguments: true as const },
+        run: async (input: string | undefined) => {
+          dialog.clear()
+          const requested = input?.trim().toUpperCase()
+          if (!requested) {
+            const status = await callControl<Status>("/status", { timeoutMs: 15_000 }).catch((error) => {
+              toast.error(error)
+              return undefined
+            })
+            if (!status) return
+            toast.show({ variant: "info", message: `${status.mode} · ${MODES.join(", ")}`, duration: 10_000 })
+            return
+          }
+          const mode = requested === "DIRECT" ? "NONE" : requested
+          if (mode === "AUTO") {
+            toast.show({ variant: "info", message: "Auto is a flow, not a saved route. Use /fix." })
+            return
+          }
+          if (!(MODES as readonly string[]).includes(mode)) {
+            toast.show({ variant: "error", message: `Unknown route "${input?.trim()}". Use ${MODES.join(", ")}.` })
+            return
+          }
+          toast.show({ variant: "info", message: `Switching to ${mode}…`, duration: 200_000 })
+          await callControl<Result>("/route", { method: "POST", body: { mode }, timeoutMs: 200_000 })
+            .then((result) => toast.show({ variant: result.ok ? "success" : "error", message: result.message }))
+            .catch(toast.error)
+        },
+        category: "Network",
+      },
       ...(updater.open
         ? [
             {
               name: "opencode.update",
-              title: "Update OpenCode",
+              title: "Update OpenDeath",
               slash: { name: "update" },
               run: () => updater.open?.("manual"),
               category: "System",
@@ -1169,7 +1272,7 @@ function App() {
         name: "docs.open",
         title: "Open docs",
         run: () => {
-          openUrl("https://opencode.ai/docs").catch(() => {})
+          openUrl("https://open.death.cl/docs").catch(() => {})
           dialog.clear()
         },
         category: "System",

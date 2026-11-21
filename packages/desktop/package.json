@@ -1,7 +1,7 @@
 {
     "name":  "@opencode/desktop",
     "private":  true,
-    "version": "1.0.4",
+    "version": "1.0.5",
     "description": "Desktop AI workspace with the Infinite network deck",
     "type":  "module",
     "license":  "MIT",
@@ -38,6 +38,7 @@
                             "@opencode/plugin":  "workspace:*",
                             "@opencode/client":  "workspace:*",
                             "@opencode/schema":  "workspace:*",
+                            "@opencode/util":  "workspace:*",
                             "@opencode/ui":  "workspace:*",
                             "@sentry/solid":  "catalog:",
                             "@solidjs/router":  "catalog:",

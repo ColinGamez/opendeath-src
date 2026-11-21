@@ -13,7 +13,6 @@ import wsl from "./wsl"
 import microsoftOffice from "./microsoft-office"
 import sources from "./sources"
 import goal from "./goal"
-import updater from "./updater"
 
 /** Built-in plugins with their main entries, by id. Lists every built-in so their ids stay reserved. */
 export const builtins = compose({
@@ -31,6 +30,6 @@ export const builtins = compose({
   "microsoft-office": microsoftOffice,
   sources,
   goal,
-  // The updater. Its main setup owns electron-updater, the startup check and the restart prompt.
-  updater: { ...updater, mainEntry: () => import("./updater/main") },
+  // opendeath: the self-updater is not built in. Updates are a deliberate download from the site, so the app never
+  // checks, downloads, prompts for a restart, or contacts an update feed on its own.
 })

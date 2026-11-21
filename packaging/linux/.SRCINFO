@@ -1,6 +1,6 @@
 pkgbase = opendeath-bin
 	pkgdesc = AI workspace with the Infinite network deck (WARP, proxy and SOCKS rotation)
-	pkgver = 1.0.4
+	pkgver = 1.0.5
 	pkgrel = 1
 	url = https://open.death.cl
 	arch = x86_64
@@ -18,10 +18,10 @@ pkgbase = opendeath-bin
 	conflicts = opendeath
 	options = !strip
 	options = !debug
-	source_x86_64 = OpenDeath-1.0.4-x86_64.AppImage::https://open.death.cl/downloads/OpenDeath-1.0.4-x86_64.AppImage
-	source_x86_64 = opendeath-cli-1.0.4-linux-x64.tar.gz::https://open.death.cl/downloads/opendeath-cli-1.0.4-linux-x64.tar.gz
+	source_x86_64 = OpenDeath-1.0.5-x86_64.AppImage::https://open.death.cl/downloads/OpenDeath-1.0.5-x86_64.AppImage
+	source_x86_64 = opendeath-cli-1.0.5-linux-x64.tar.gz::https://open.death.cl/downloads/opendeath-cli-1.0.5-linux-x64.tar.gz
 	sha256sums_x86_64 = SKIP
 	sha256sums_x86_64 = SKIP
-	noextract = opendeath-cli-1.0.4-linux-x64.tar.gz
+	noextract = opendeath-cli-1.0.5-linux-x64.tar.gz
 
 pkgname = opendeath-bin

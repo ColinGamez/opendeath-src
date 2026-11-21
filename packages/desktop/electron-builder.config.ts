@@ -180,7 +180,6 @@ const getBase = (appId: string): Configuration => {
     win: {
       icon: `resources/icons/icon.ico`,
       target: ["nsis"],
-      verifyUpdateCodeSignature: false,
     },
     nsis: {
       include: path.join(packageDir, "resources", "windows", "installer.nsh"),
@@ -220,11 +219,6 @@ export function getConfig() {
         ...base,
         appId,
         productName: "opendeath Dev",
-        publish: {
-          provider: "generic",
-          url: "https://opendeath.invalid/updates/dev/",
-          channel: "latest",
-        },
         deb: { fpm: [...previewCompressionFpm("deb"), metainfoFpm(appId)] },
         rpm: {
           packageName: "opencode-dev",
@@ -239,11 +233,6 @@ export function getConfig() {
         appId,
         productName: "opendeath Beta",
         protocols: { name: "opendeath Beta", schemes: ["opencode"] },
-        publish: {
-          provider: "generic",
-          url: "https://opendeath.invalid/updates/beta/",
-          channel: "latest",
-        },
         deb: { fpm: [...previewCompressionFpm("deb"), metainfoFpm(appId)] },
         rpm: {
           packageName: "opencode-beta",
@@ -263,14 +252,9 @@ export function getConfig() {
         mac: { ...base.mac, icon: "resources/icons/icon.icon" },
         // The DMG volume icon would otherwise use the same actool-generated ICNS.
         dmg: { icon: "resources/icons/icon.icns" },
-        // opendeath: self-update feed. electron-updater reads resources/app-update.yml (written by script/pack.ts)
-        // and polls latest.yml from the release folder on our own server. The original Infinite build pointed at
-        // GitLab and would have replaced itself with the upstream app; this feed only ever carries our installer.
-        publish: {
-          provider: "generic",
-          url: "https://open.death.cl/downloads/",
-          channel: "latest",
-        },
+        // opendeath: no publish/update feed. The app never checks for or downloads an update; a newer
+        // build is a manual download from open.death.cl. Keeping this out of the config also keeps
+        // electron-builder from baking an app-update.yml into any package.
         deb: { packageName: "opendeath", fpm: [metainfoFpm(appId), legacyDesktopEntryFpm] },
         rpm: { packageName: "opendeath", fpm: [rpmNoBuildIdLinksFpm, metainfoFpm(appId), legacyDesktopEntryFpm] },
         // The desktop binary is `opendeath-desktop` so the terminal command `opendeath` can belong to the CLI.

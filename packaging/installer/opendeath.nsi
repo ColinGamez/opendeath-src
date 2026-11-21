@@ -1,4 +1,4 @@
-; OpenDeath 1.0.4 setup wizard
+; OpenDeath 1.0.5 setup wizard
 ; Installs the packaged desktop app per user, requires Cloudflare WARP first (the default route),
 ; checks for OpenCode Desktop, and optionally installs other VPN clients from their official winget packages.
 
@@ -12,7 +12,7 @@ Unicode true
 !include "x64.nsh"
 
 !define PRODUCT     "OpenDeath"
-!define VERSION     "1.0.4"
+!define VERSION     "1.0.5"
 !define PUBLISHER   "saintkyle"
 !define APPID       "dev.opendeath.desktop"
 !define APP_EXE     "opendeath.exe"
@@ -20,8 +20,6 @@ Unicode true
 !define APP_ICON    "C:\od\app\packages\desktop\icons\prod\icon.ico"
 !define ART         "C:\Users\Kylem\Documents\Qoder\2026-11-17\02a21507\installer\assets"
 !define OUT_FILE    "C:\Users\Kylem\Documents\Qoder\2026-11-17\02a21507\release\OpenDeath-Setup-${VERSION}.exe"
-; electron-updater downloads into this folder and runs the installer from it with /S.
-!define UPDATER_CACHE "$LOCALAPPDATA\@opencodedesktop-updater\pending"
 
 Name "${PRODUCT} ${VERSION}"
 OutFile "${OUT_FILE}"
@@ -37,10 +35,10 @@ Caption "${PRODUCT} ${VERSION} Setup"
 Icon "${APP_ICON}"
 UninstallIcon "${APP_ICON}"
 
-VIProductVersion "1.0.4.0"
+VIProductVersion "1.0.5.0"
 VIAddVersionKey /LANG=1033 "ProductName"     "${PRODUCT}"
 VIAddVersionKey /LANG=1033 "ProductVersion"  "${VERSION}"
-VIAddVersionKey /LANG=1033 "FileVersion"     "1.0.4.0"
+VIAddVersionKey /LANG=1033 "FileVersion"     "1.0.5.0"
 VIAddVersionKey /LANG=1033 "FileDescription" "${PRODUCT} Setup"
 VIAddVersionKey /LANG=1033 "CompanyName"     "${PUBLISHER}"
 VIAddVersionKey /LANG=1033 "LegalCopyright"  "Copyright (C) 2026 ${PUBLISHER}"
@@ -81,34 +79,20 @@ Var WarpCheck
 Var BoldFont
 Var OpenCodeFound
 Var WarpFound
-; The version already on disk, so a silent run can tell an upgrade from a first install.
-Var PriorVersion
-; Set when the install should hand the app back to the user.
-Var Relaunch
 
 Function .onInit
   ${IfNot} ${RunningX64}
     MessageBox MB_ICONSTOP "OpenDeath requires 64-bit Windows."
     Abort
   ${EndIf}
+  ; OpenDeath is installed by the person running setup, never by a script or another program.
+  ; A silent run has no pages, no choices, and no consent, so refuse it outright.
+  ${If} ${Silent}
+    SetSilent normal
+    MessageBox MB_ICONSTOP "OpenDeath must be installed by hand.$\r$\n$\r$\nRun the setup normally and follow the wizard; silent installs are not supported."
+    Abort
+  ${EndIf}
   SetShellVarContext current
-  ReadRegStr $PriorVersion HKCU "Software\OpenDeath" "Version"
-FunctionEnd
-
-; electron-updater runs this installer from its download cache with /S; the finish page never shows, so the launch it
-; normally offers has to happen here. An update always upgrades a version that is already on disk, which covers a cache
-; path that differs by case; a first install stays quiet.
-Function .onInstSuccess
-  StrCpy $Relaunch "0"
-  ${If} $EXEDIR == "${UPDATER_CACHE}"
-    StrCpy $Relaunch "1"
-  ${ElseIf} ${Silent}
-  ${AndIf} $PriorVersion != ""
-    StrCpy $Relaunch "1"
-  ${EndIf}
-  ${If} $Relaunch == "1"
-    ExecShell "open" "$INSTDIR\${APP_EXE}"
-  ${EndIf}
 FunctionEnd
 
 Function LaunchOpenDeath
@@ -376,17 +360,14 @@ SectionEnd
 Section "Cloudflare WARP (required)" SecWarp
   SectionIn RO
 
-  ; The prerequisite page installs WARP before this point. This covers a silent upgrade, where every page is skipped
-  ; and the RO section is the only thing that can still put the default route in place. An update must not start a
-  ; winget install behind the user's back; a missing client is reported by the app's own setup check.
+  ; The prerequisite page installs WARP before this point. This covers an upgrade where every page is skipped
+  ; and the RO section is the only thing that can still put the default route in place.
   Call DetectWarp
   ${If} $WarpFound == "1"
     DetailPrint "Cloudflare WARP is already installed."
   ${Else}
-    ${IfNot} ${Silent}
-      !insertmacro WingetInstall "Cloudflare.Warp" "Cloudflare WARP"
-      Call DetectWarp
-    ${EndIf}
+    !insertmacro WingetInstall "Cloudflare.Warp" "Cloudflare WARP"
+    Call DetectWarp
     ${If} $WarpFound == "0"
       DetailPrint "Cloudflare WARP is still missing. Install it from cloudflare.com/warp before using the WARP route."
     ${EndIf}

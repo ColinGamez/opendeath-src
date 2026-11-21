@@ -12,7 +12,7 @@
 
 set -eu
 
-VERSION="${OPEND_VERSION:-1.0.4}"
+VERSION="${OPEND_VERSION:-1.0.5}"
 BASE="${OPEND_BASE_URL:-https://open.death.cl/downloads}"
 TMP="$(mktemp -d)"
 WANT_WARP=0
@@ -39,7 +39,7 @@ have() { command -v "$1" >/dev/null 2>&1; }
 
 case "$(uname -m)" in
   x86_64|amd64) ARCH=x64; DEB=amd64; RPM=x86_64; IMG=x86_64 ;;
-  *) die "OpenDeath 1.0.4 is built for x86_64 Linux; this machine is $(uname -m)." ;;
+  *) die "OpenDeath 1.0.5 is built for x86_64 Linux; this machine is $(uname -m)." ;;
 esac
 
 # Root when possible, per-user when not. A piped installer must never leave a half-installed system package behind.

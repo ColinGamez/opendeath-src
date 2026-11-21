@@ -1,8 +1,17 @@
 param(
-  [string]$Version = "1.0.4",
+  [string]$Version = "1.0.5",
   [string]$Setup,
-  [string]$Base = "C:\Users\Kylem\Documents\Qoder\2026-11-17\02a21507"
+  [string]$Base = "C:\Users\Kylem\Documents\Qoder\2026-11-17\02a21507",
+  # Deliberate override for restoring a feed that pre-1.0.5 builds can read. Normal releases do not pass this.
+  [switch]$PublishFeed
 )
+
+# OpenDeath 1.0.5 has no updater. This script exists only for the transition: the site keeps the
+# existing 1.0.4 latest.yml so pre-1.0.5 builds do not see a new version, and no feed is generated for
+# 1.0.5. Running this without -PublishFeed stops before it can create an automatic update path.
+if (-not $PublishFeed) {
+  throw "Auto-update is removed. Not generating latest.yml. Pass -PublishFeed only to repair the pre-1.0.5 feed."
+}
 
 # electron-updater's generic provider reads latest.yml from the folder it points at (https://open.death.cl/downloads/).
 # It needs the installer's SHA-512 (base64, not hex), its size, and the version. No blockmap is published, so every

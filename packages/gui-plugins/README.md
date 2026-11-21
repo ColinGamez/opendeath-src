@@ -762,12 +762,13 @@ export const builtins = compose({
   details,
   browser: { ...browser, mainEntry: () => import("./browser/main") },
   pairing: { ...pairing, mainEntry: () => import("./pairing/main") },
-  updater: { ...updater, mainEntry: () => import("./updater/main") },
   ssh: { ...ssh, mainEntry: () => import("./ssh/main") },
   wsl: { ...wsl, mainEntry: () => import("./wsl/main") },
   "microsoft-office": microsoftOffice,
   sources,
   goal,
+  // opendeath: the self-updater is not built in. Updates are a deliberate download from the site, so the app never
+  // checks, downloads, prompts for a restart, or contacts an update feed on its own.
 })
 ```
 
@@ -787,7 +788,6 @@ export const builtins = compose({
   details: { ...details, windowEntry: eager(detailsRenderer) },
   browser: { ...browser, windowEntry: eager(browserRenderer) },
   pairing: { ...pairing, windowEntry: eager(pairingRenderer) },
-  updater: { ...updater, windowEntry: eager(updaterRenderer) },
   ssh: { ...ssh, windowEntry: eager(sshRenderer) },
   wsl: { ...wsl, windowEntry: eager(wslRenderer) },
   "microsoft-office": { ...microsoftOffice, windowEntry: eager(microsoftOfficeRenderer) },

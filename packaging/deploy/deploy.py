@@ -15,7 +15,7 @@ import paramiko
 HOST = os.environ.get("OPEND_SSH_HOST", "172.255.210.162")
 USER = os.environ.get("OPEND_SSH_USER", "root")
 PASSWORD = os.environ.get("OPEND_SSH_PASSWORD", "")
-VERSION = os.environ.get("OPEND_VERSION", "1.0.4")
+VERSION = os.environ.get("OPEND_VERSION", "1.0.5")
 
 LOCAL_SITE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "website"))
 LOCAL_RELEASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "release"))
@@ -110,7 +110,8 @@ def upload_downloads(sftp):
         f"OpenDeath-Setup-{VERSION}.exe",
         f"OpenDeath-Portable-{VERSION}.exe",
         "SHA256SUMS.txt",
-        # electron-updater reads its feed from here, so it ships with the binaries.
+        # Frozen pre-1.0.5 feed: 1.0.5 has no updater and publishes no new feed. Keeping the old file
+        # means an older installed build sees no new version and stays put until the user reinstalls.
         "latest.yml",
     ]
     for name in names:
@@ -210,7 +211,7 @@ def reset_counter(client):
         "set -e; "
         "LOG=/var/log/nginx/opendeath-downloads.log; "
         "STAMP=$(date -u +%Y%m%dT%H%M%SZ); "
-        'if [ -s "$LOG" ]; then mv "$LOG" "$LOG.pre-1.0.4-$STAMP"; fi; '
+        'if [ -s "$LOG" ]; then mv "$LOG" "$LOG.pre-1.0.5-$STAMP"; fi; '
         ': > "$LOG"; '
         'chown www-data:www-data "$LOG" 2>/dev/null || true; '
         'chmod 644 "$LOG"; '

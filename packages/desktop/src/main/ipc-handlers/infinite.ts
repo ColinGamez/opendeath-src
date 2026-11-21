@@ -1,3 +1,4 @@
+import { app } from "electron"
 import { Effect } from "effect"
 import { InfiniteRpcs } from "../../shared/ipc-rpc/infinite"
 import {
@@ -27,6 +28,7 @@ import {
   type Result,
 } from "../infinite/infinite"
 import { voiceTyping } from "../infinite/dictate"
+import { startInfiniteControl } from "../infinite/control"
 import { install, plan } from "../infinite/install"
 import { bringUpRoute64, importRoute64, removeRoute64, route64Status } from "../infinite/route64"
 import { BackgroundService, customChannelFile, registrationFile } from "../service/background-service"
@@ -166,6 +168,45 @@ export const infiniteHandlers = InfiniteRpcs.toLayer(
       )
     }
 
+    const MODE_LABEL = {
+      WARP: "WARP",
+      PROXY: "Proxy",
+      SOCKS: "SOCKS5",
+      ROUTE64: "Route64",
+      MULLVAD: "Mullvad",
+      WINDSCRIBE: "Windscribe",
+      NONE: "Direct",
+    } as const
+
+    // The window's connection doctor, for the CLI: keep a working connection, then WARP, then the user's own lists,
+    // then direct. Every step takes the action lock through setModeFlow, so this flow must not hold that lock itself.
+    const fixFlow = () =>
+      Effect.gen(function* () {
+        const current = getMode()
+        const checked = yield* Effect.tryPromise(() => checkIp())
+        if (checked.ok)
+          return { ...checked, message: `${MODE_LABEL[current]} works${checked.ip ? ` on ${checked.ip}` : ""}.` }
+
+        const options = getOptions()
+        const order: Array<Parameters<typeof applyMode>[0]> = []
+        const add = (mode: Parameters<typeof applyMode>[0]) => {
+          if (!order.includes(mode)) order.push(mode)
+        }
+        if (current === "WARP" || current === "PROXY" || current === "SOCKS") add(current)
+        add("WARP")
+        if (options.socks) add("SOCKS")
+        if (options.custom) add("PROXY")
+        add("NONE")
+
+        const notes: string[] = []
+        for (const mode of order) {
+          const applied = yield* setModeFlow(mode)
+          if (applied.ok) return applied
+          notes.push(`${MODE_LABEL[mode]}: ${applied.message}`)
+        }
+        return { ok: false, message: notes.join(" | ") || "Nothing could be connected." }
+      })
+
     // Auto-rotate keeps the session. WARP keeps the same local proxy, so it rotates without a restart.
     // The IPs are tried on throwaway probe sessions; the chat is only touched once one works.
     const autoRotate = (sessionID: string) =>
@@ -253,6 +294,35 @@ export const infiniteHandlers = InfiniteRpcs.toLayer(
             }),
           ),
         ),
+    )
+
+    // The terminal CLI and the TUI have no Electron IPC. They get the same guarded actions over a loopback port,
+    // protected by a token written to the app's user-data directory.
+    yield* Effect.acquireRelease(
+      Effect.tryPromise({
+        try: () =>
+          startInfiniteControl({
+            directory: app.getPath("userData"),
+            version: app.getVersion(),
+            handlers: {
+              status: async () => {
+                const options = getOptions()
+                return { mode: getMode(), auto: options.auto, busy: running, waiting: pending.size }
+              },
+              check: () => checkIp(),
+              fix: () => Effect.runPromise(fixFlow()),
+              reset: () => Effect.runPromise(resetFlow()),
+              rotate: () => Effect.runPromise(guarded("Changing the IP", 180_000, Effect.tryPromise(rotateOnly))),
+              route: (mode) => Effect.runPromise(setModeFlow(mode)),
+            },
+          }),
+        catch: (error) => error,
+      }).pipe(
+        Effect.catch((error: unknown) =>
+          Effect.logError("the network deck control port did not start", error).pipe(Effect.as(undefined)),
+        ),
+      ),
+      (server) => (server ? Effect.promise(() => server.close()) : Effect.void),
     )
 
     return InfiniteRpcs.of({
