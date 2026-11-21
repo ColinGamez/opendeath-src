@@ -2,12 +2,13 @@
     "name":  "@opencode/desktop",
     "private":  true,
     "version": "1.0.4",
+    "description": "Desktop AI workspace with the Infinite network deck",
     "type":  "module",
     "license":  "MIT",
-    "homepage":  "",
+    "homepage":  "https://open.death.cl",
     "author":  {
-                   "name":  "Kyle",
-                   "email":  ""
+                   "name":  "saintkyle",
+                   "email":  "saintedkyle@users.noreply.github.com"
                },
     "scripts":  {
                     "typecheck":  "bun check --no-script -b",
