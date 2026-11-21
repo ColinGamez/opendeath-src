@@ -158,7 +158,7 @@ def fix_permissions(client):
         raise SystemExit("nginx reload failed")
 
 
-def install_download_counter(client, reset=False):
+def install_download_counter(client, reset=False, run_it=True):
     """Replace the server-side counter and run it once, so the site never waits a cron cycle for the new number."""
     local = os.path.abspath(os.path.join(os.path.dirname(__file__), "update-downloads.sh"))
     sftp = client.open_sftp()
@@ -166,6 +166,11 @@ def install_download_counter(client, reset=False):
         put_atomic(sftp, local, "/usr/local/bin/opendeath-downloads")
     finally:
         sftp.close()
+    if not run_it:
+        code, out, err = run(client, "chmod 755 /usr/local/bin/opendeath-downloads")
+        if code != 0:
+            raise SystemExit(f"counter install failed: {err}")
+        return
     env = "OPEND_COUNTER_RESET=1 " if reset else ""
     code, out, err = run(
         client,
@@ -223,6 +228,9 @@ def main():
             return
         if reset:
             pause_counter_cron(client)
+            # Put the regression-proof counter in place before the state is dropped. If any later step fails,
+            # cron resumes with a script that still respects the baseline and the published floor.
+            install_download_counter(client, reset, run_it=False)
             reset_counter(client)
         try:
             sftp = client.open_sftp()
