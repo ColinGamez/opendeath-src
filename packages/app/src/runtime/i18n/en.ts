@@ -1,6 +1,12 @@
 import { DESKTOP_NATIVE_ENGLISH } from "./desktop-native"
 
 export const dict = {
+  "connection.diagnosis.title": "Connection and model access",
+  "connection.diagnosis.quota": "The provider reported a usage limit. Models on the same provider may share an allowance. Check the provider's usage page or use a separately configured provider. Reinstalling does not replenish provider quota. A reset time is unknown unless the provider supplies it.",
+  "connection.diagnosis.rate": "The provider is limiting request frequency. Pause retries and follow its retry-after time if supplied. This does not by itself establish that your account quota is exhausted.",
+  "connection.diagnosis.network": "The connection failed before a reliable answer arrived. Check the selected route and proxy. A connection reset does not prove that your usage allowance is exhausted.",
+  "connection.diagnosis.auth": "The provider rejected authentication. Check the selected provider and reconnect your account or update its API key in provider settings.",
+  "connection.diagnosis.unknown": "A working IP check confirms connectivity only. It does not confirm model availability, authentication, or remaining quota. Keep the exact model error when requesting help.",
   "experiment.voiceCalls": "Voice calls",
   "voice.call": "Call",
   "voice.mute": "Mute",

@@ -1,6 +1,8 @@
 import { createSignal, For, Show } from "solid-js"
 import { Dialog, DialogBody, DialogHeader, DialogTitleGroup } from "@opencode/ui/dialog"
 import { usePlatform } from "@/runtime/platform/platform"
+import { useLanguage } from "@/runtime/i18n/language"
+import { connectionError } from "./connection-error"
 
 // The help the deck never had: what is wrong right now, and what to do about it. Every command is selectable and
 // copyable, because the people who hit these failures are not going to retype a warp-cli call from a screenshot.
@@ -30,10 +32,6 @@ const FIXES: Fix[] = [
   {
     title: "Reset limit signed me out",
     body: "Fixed in 1.0.4: the session is archived, the IP changes, and the session is restored before the app reconnects. If a rotation fails, the session is still put back. Make sure Proxy or WARP works first; Reset needs an IP to move to.",
-  },
-  {
-    title: "Reset limit did nothing",
-    body: "Reset only moves the IP. If the account is out of free messages for the day, a new IP will not refill it: the counter is per account. Sign in with another account, or wait for the daily reset.",
   },
   {
     title: "Proxy keeps failing",
@@ -72,6 +70,7 @@ const LINUX_INSTALL: { label: string; command: string }[] = [
 /** The error the deck last reported, plus the fixes that actually apply to it. */
 export function HelpDialog(props: { message?: string; version?: string }) {
   const infinite = usePlatform().infinite
+  const language = useLanguage()
   const [mode, setMode] = createSignal("")
   const [copied, setCopied] = createSignal("")
   const [note, setNote] = createSignal("")
@@ -114,6 +113,13 @@ export function HelpDialog(props: { message?: string; version?: string }) {
                 Mode {mode() || "unknown"}
                 {props.message ? ` · ${props.message}` : " · no error reported"}
               </div>
+            </div>
+
+            <div class="rounded-xl border border-v2-border-border-muted bg-v2-background-bg-layer-01 px-4 py-3">
+              <div class="text-13-medium text-v2-text-text-base">{language.t("connection.diagnosis.title")}</div>
+              <p class="mt-1 text-13-regular text-v2-text-text-muted">
+                {language.t(`connection.diagnosis.${connectionError(props.message ?? "")}`)}
+              </p>
             </div>
 
             <For each={FIXES}>
