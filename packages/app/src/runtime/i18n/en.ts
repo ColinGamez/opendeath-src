@@ -1,12 +1,31 @@
 import { DESKTOP_NATIVE_ENGLISH } from "./desktop-native"
 
 export const dict = {
+  "connection.requests.title": "Recent model requests",
+  "connection.requests.scope":
+    "Latest request per chat, up to eight chats, observed in this window since launch. Previous errors remain visible after recovery. These diagnostics stay in memory until you copy them.",
+  "connection.requests.empty": "No model requests observed yet. Send a message, then return here.",
+  "connection.requests.running": "Request started",
+  "connection.requests.retrying": "Waiting to retry",
+  "connection.requests.failed": "Request failed",
+  "connection.requests.recovered": "Recovered after an error",
+  "connection.requests.completed": "Request completed",
+  "connection.requests.model": "Model: {{model}} · Provider: {{provider}}",
+  "connection.requests.attempt": "Retry attempt: {{attempt}}",
+  "connection.requests.retryAt": "Next retry scheduled: {{time}}",
+  "connection.requests.resetAt": "Provider retry-after time: {{time}}",
+  "connection.requests.resetUnknown": "The provider did not supply a reset time.",
   "connection.diagnosis.title": "Connection and model access",
-  "connection.diagnosis.quota": "The provider reported a usage limit. Models on the same provider may share an allowance. Check the provider's usage page or use a separately configured provider. Reinstalling does not replenish provider quota. A reset time is unknown unless the provider supplies it.",
-  "connection.diagnosis.rate": "The provider is limiting request frequency. Pause retries and follow its retry-after time if supplied. This does not by itself establish that your account quota is exhausted.",
-  "connection.diagnosis.network": "The connection failed before a reliable answer arrived. Check the selected route and proxy. A connection reset does not prove that your usage allowance is exhausted.",
-  "connection.diagnosis.auth": "The provider rejected authentication. Check the selected provider and reconnect your account or update its API key in provider settings.",
-  "connection.diagnosis.unknown": "A working IP check confirms connectivity only. It does not confirm model availability, authentication, or remaining quota. Keep the exact model error when requesting help.",
+  "connection.diagnosis.quota":
+    "The provider reported a usage limit. Models on the same provider may share an allowance. Check the provider's usage page or use a separately configured provider. Reinstalling does not replenish provider quota. A reset time is unknown unless the provider supplies it.",
+  "connection.diagnosis.rate":
+    "The provider is limiting request frequency. Pause retries and follow its retry-after time if supplied. This does not by itself establish that your account quota is exhausted.",
+  "connection.diagnosis.network":
+    "The connection failed before a reliable answer arrived. Check the selected route and proxy. A connection reset does not prove that your usage allowance is exhausted.",
+  "connection.diagnosis.auth":
+    "The provider rejected authentication. Check the selected provider and reconnect your account or update its API key in provider settings.",
+  "connection.diagnosis.unknown":
+    "A working IP check confirms connectivity only. It does not confirm model availability, authentication, or remaining quota. Keep the exact model error when requesting help.",
   "experiment.voiceCalls": "Voice calls",
   "voice.call": "Call",
   "voice.mute": "Mute",

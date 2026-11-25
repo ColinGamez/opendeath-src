@@ -3,6 +3,7 @@ import { Dialog, DialogBody, DialogHeader, DialogTitleGroup } from "@opencode/ui
 import { usePlatform } from "@/runtime/platform/platform"
 import { useLanguage } from "@/runtime/i18n/language"
 import { connectionError } from "./connection-error"
+import type { RequestDiagnostic } from "./request-diagnostics"
 
 // The help the deck never had: what is wrong right now, and what to do about it. Every command is selectable and
 // copyable, because the people who hit these failures are not going to retype a warp-cli call from a screenshot.
@@ -59,7 +60,7 @@ const LINUX_INSTALL: { label: string; command: string }[] = [
   {
     label: "Fedora, RHEL, Rocky, AlmaLinux, Nobara",
     command:
-      'sudo sh -c \'curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg -o /etc/pki/rpm-gpg/RPM-GPG-KEY-cloudflare && printf "[cloudflare-warp]\\nname=Cloudflare WARP\\nbaseurl=https://pkg.cloudflareclient.com/rpm\\nenabled=1\\ngpgcheck=1\\ngpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-cloudflare\\n" > /etc/yum.repos.d/cloudflare-warp.repo\' && sudo dnf install -y cloudflare-warp',
+      "sudo sh -c 'curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg -o /etc/pki/rpm-gpg/RPM-GPG-KEY-cloudflare && printf \"[cloudflare-warp]\\nname=Cloudflare WARP\\nbaseurl=https://pkg.cloudflareclient.com/rpm\\nenabled=1\\ngpgcheck=1\\ngpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-cloudflare\\n\" > /etc/yum.repos.d/cloudflare-warp.repo' && sudo dnf install -y cloudflare-warp",
   },
   {
     label: "Arch, CachyOS, Manjaro, EndeavourOS",
@@ -68,7 +69,7 @@ const LINUX_INSTALL: { label: string; command: string }[] = [
 ]
 
 /** The error the deck last reported, plus the fixes that actually apply to it. */
-export function HelpDialog(props: { message?: string; version?: string }) {
+export function HelpDialog(props: { message?: string; version?: string; requests?: RequestDiagnostic[] }) {
   const infinite = usePlatform().infinite
   const language = useLanguage()
   const [mode, setMode] = createSignal("")
@@ -93,6 +94,7 @@ export function HelpDialog(props: { message?: string; version?: string }) {
       `Platform: ${navigator.userAgent}`,
       `Mode: ${mode() || "unknown"}`,
       `Last message: ${props.message || "none"}`,
+      ...(props.requests ?? []).map((request) => JSON.stringify(request)),
       `Logs: %APPDATA%\\dev.opendeath.desktop\\logs (Windows), ~/.local/share/opencode (Linux)`,
     ].join("\n")
 
@@ -121,6 +123,53 @@ export function HelpDialog(props: { message?: string; version?: string }) {
                 {language.t(`connection.diagnosis.${connectionError(props.message ?? "")}`)}
               </p>
             </div>
+
+            <section class="flex flex-col gap-2">
+              <h3 class="text-13-medium text-v2-text-text-base">{language.t("connection.requests.title")}</h3>
+              <p class="text-13-regular text-v2-text-text-muted">{language.t("connection.requests.scope")}</p>
+              <Show when={props.requests?.length} fallback={<p>{language.t("connection.requests.empty")}</p>}>
+                <For each={props.requests}>
+                  {(request) => (
+                    <div class="rounded-xl border border-v2-border-border-muted px-4 py-3 text-13-regular break-words">
+                      <div class="text-v2-text-text-base">
+                        {language.t(`connection.requests.${request.status}`)} · {new Date(request.at).toLocaleString()}
+                      </div>
+                      <div>
+                        {language.t("connection.requests.model", {
+                          model: request.model ?? "?",
+                          provider: request.provider ?? "?",
+                        })}
+                      </div>
+                      <Show when={request.attempt}>
+                        {(attempt) => <div>{language.t("connection.requests.attempt", { attempt: attempt() })}</div>}
+                      </Show>
+                      <Show when={request.retryAt}>
+                        {(at) => (
+                          <div>
+                            {language.t("connection.requests.retryAt", { time: new Date(at()).toLocaleString() })}
+                          </div>
+                        )}
+                      </Show>
+                      <Show when={request.error}>
+                        <p class="mt-2">{request.error}</p>
+                        <p class="mt-1 text-v2-text-text-muted">
+                          {language.t(`connection.diagnosis.${connectionError(request.error ?? "")}`)}
+                        </p>
+                      </Show>
+                      <Show when={request.status === "failed" || request.status === "retrying"}>
+                        <p>
+                          {request.resetAt && Number.isFinite(request.resetAt)
+                            ? language.t("connection.requests.resetAt", {
+                                time: new Date(request.resetAt).toLocaleString(),
+                              })
+                            : language.t("connection.requests.resetUnknown")}
+                        </p>
+                      </Show>
+                    </div>
+                  )}
+                </For>
+              </Show>
+            </section>
 
             <For each={FIXES}>
               {(fix) => (
@@ -164,7 +213,9 @@ export function HelpDialog(props: { message?: string; version?: string }) {
                 <div class="mt-3">
                   <div class="mb-1 text-12-regular text-v2-text-text-faint">After installing (any distribution)</div>
                   <div class="flex items-center gap-2">
-                    <code class={code}>sudo systemctl enable --now warp-svc && warp-cli --accept-tos registration new</code>
+                    <code class={code}>
+                      sudo systemctl enable --now warp-svc && warp-cli --accept-tos registration new
+                    </code>
                     <button
                       type="button"
                       class={chip}

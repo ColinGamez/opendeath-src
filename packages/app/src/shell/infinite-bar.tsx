@@ -1,7 +1,17 @@
-import { createSignal, For, onCleanup, onMount, Show, type JSX } from "solid-js"
+import { createEffect, createSignal, For, onCleanup, onMount, Show, type JSX } from "solid-js"
+import { createStore } from "solid-js/store"
+import { useGlobal } from "@/runtime/server/runtime"
+import { ServerConnection } from "@/runtime/server/registry"
+import { requestDiagnostics, type RequestDiagnostic } from "./request-diagnostics"
 import { useDialog } from "@opencode/ui/context/dialog"
 import { usePlatform } from "@/runtime/platform/platform"
-import { advancedMode, autoRotate as auto, jailbreak, setAutoRotate as setAuto, setJailbreak } from "@/shell/infinite-state"
+import {
+  advancedMode,
+  autoRotate as auto,
+  jailbreak,
+  setAutoRotate as setAuto,
+  setJailbreak,
+} from "@/shell/infinite-state"
 import { initLook } from "@/shell/infinite-look"
 import { deckDensity } from "@/shell/ui-prefs"
 import { SettingsDialog } from "@/shell/settings-dialog"
@@ -29,12 +39,28 @@ type Result = { ok: boolean; message: string; ip?: string }
 
 const modes: { id: Choice; label: string; title: string }[] = [
   { id: "WARP", label: "WARP", title: "Cloudflare WARP proxy. The default route. Asks before installing WARP." },
-  { id: "AUTO", label: "Auto", title: "WARP when it works, then the free proxy list, so the IP can still change. Installs nothing." },
+  {
+    id: "AUTO",
+    label: "Auto",
+    title: "WARP when it works, then the free proxy list, so the IP can still change. Installs nothing.",
+  },
   { id: "PROXY", label: "Proxy", title: "Your proxy list, or the free list when it is empty." },
-  { id: "SOCKS", label: "SOCKS5", title: "Your SOCKS5 servers, reached through a local bridge. Needs a list in Settings." },
-  { id: "ROUTE64", label: "Route64", title: "route64 WireGuard tunnel. Needs your .conf and administrator permission." },
+  {
+    id: "SOCKS",
+    label: "SOCKS5",
+    title: "Your SOCKS5 servers, reached through a local bridge. Needs a list in Settings.",
+  },
+  {
+    id: "ROUTE64",
+    label: "Route64",
+    title: "route64 WireGuard tunnel. Needs your .conf and administrator permission.",
+  },
   { id: "MULLVAD", label: "Mullvad", title: "Mullvad app: switches server. Needs Mullvad installed and logged in." },
-  { id: "WINDSCRIBE", label: "Windscribe", title: "Windscribe app: switches server. Needs Windscribe installed and logged in." },
+  {
+    id: "WINDSCRIBE",
+    label: "Windscribe",
+    title: "Windscribe app: switches server. Needs Windscribe installed and logged in.",
+  },
   { id: "NONE", label: "None", title: "Direct connection, no proxy." },
 ]
 
@@ -95,6 +121,48 @@ const writeFlag = (key: string, value: string) => {
 // The strip renders from the HUD layout store, so every control keeps its own slot and order.
 export function InfiniteBar() {
   const platform = usePlatform()
+  const global = useGlobal()
+  const [diagnostics, setDiagnostics] = createStore<{ rows: RequestDiagnostic[] }>({ rows: [] })
+  createEffect(() => {
+    global.servers.list().forEach((server) => {
+      const sdk = global.serverCtx(ServerConnection.key(server))?.sdk
+      if (!sdk) return
+      onCleanup(
+        sdk.event.listen((event) => {
+          if (
+            event.type !== "session.step.started" &&
+            event.type !== "session.retry.scheduled" &&
+            event.type !== "session.step.failed" &&
+            event.type !== "session.step.ended"
+          )
+            return
+          const base = {
+            id: event.id,
+            sessionID: event.data.sessionID,
+            messageID: event.data.assistantMessageID,
+            at: event.created,
+          }
+          const update =
+            event.type === "session.step.started"
+              ? { ...base, type: "started" as const, model: event.data.model.id, provider: event.data.model.providerID }
+              : event.type === "session.step.ended"
+                ? { ...base, type: "completed" as const }
+                : {
+                    ...base,
+                    error: `${event.data.error.type}: ${event.data.error.message}`,
+                    resetAt:
+                      event.data.error.retryAfterMs === undefined
+                        ? undefined
+                        : event.created + event.data.error.retryAfterMs,
+                    ...(event.type === "session.retry.scheduled"
+                      ? { type: "retrying" as const, attempt: event.data.attempt, retryAt: event.data.at }
+                      : { type: "failed" as const }),
+                  }
+          setDiagnostics("rows", (rows) => requestDiagnostics(rows, update))
+        }),
+      )
+    })
+  })
   const dialog = useDialog()
   const infinite = platform.infinite
   const [mode, setMode] = createSignal<Mode>("NONE")
@@ -271,7 +339,11 @@ export function InfiniteBar() {
       </span>
     ),
     connection: () => (
-      <div class="flex flex-wrap items-center gap-1 p-0.5 rounded-lg bg-v2-background-bg-layer-02" role="radiogroup" aria-label="Connection">
+      <div
+        class="flex flex-wrap items-center gap-1 p-0.5 rounded-lg bg-v2-background-bg-layer-02"
+        role="radiogroup"
+        aria-label="Connection"
+      >
         <For each={visibleModes()}>
           {(item) => (
             <button
@@ -329,7 +401,9 @@ export function InfiniteBar() {
         disabled={hudEditing()}
         title="What is failing right now, and the fixes that apply to it."
         onClick={() =>
-          void dialog.show(() => <HelpDialog message={result()?.ok === false ? result()?.message : undefined} />)
+          void dialog.show(() => (
+            <HelpDialog message={result()?.ok === false ? result()?.message : undefined} requests={diagnostics.rows} />
+          ))
         }
       >
         Help
@@ -436,10 +510,7 @@ export function InfiniteBar() {
         class="shrink-0 flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 text-12-regular bg-v2-background-bg-deep border-b border-v2-border-border-muted text-v2-text-text-muted"
         classList={{ "py-1": deckDensity() === "compact", "py-2": deckDensity() !== "compact" }}
       >
-        <Show
-          when={hudEditing()}
-          fallback={<For each={visibleItems()}>{(item) => slots[item]()}</For>}
-        >
+        <Show when={hudEditing()} fallback={<For each={visibleItems()}>{(item) => slots[item]()}</For>}>
           <div class="flex w-full flex-wrap items-center gap-1.5">
             <span class="pe-1 text-[10px] uppercase tracking-[0.22em] text-v2-text-text-faint">HUD editor</span>
             <For each={hudLayout().order}>
@@ -451,8 +522,10 @@ export function InfiniteBar() {
                   title={`${ITEM_NAMES[item]} — drag to move, click to hide or show`}
                   class="cursor-grab rounded-md border px-2 py-0.5 text-12-regular active:cursor-grabbing"
                   classList={{
-                    "border-v2-border-border-base bg-v2-background-bg-accent/15 text-v2-text-text-accent": dragging() === item,
-                    "border-v2-border-border-muted bg-v2-background-bg-layer-02 text-v2-text-text-base": dragging() !== item && !isHidden(item),
+                    "border-v2-border-border-base bg-v2-background-bg-accent/15 text-v2-text-text-accent":
+                      dragging() === item,
+                    "border-v2-border-border-muted bg-v2-background-bg-layer-02 text-v2-text-text-base":
+                      dragging() !== item && !isHidden(item),
                     "border-dashed border-v2-border-border-muted text-v2-text-text-faint line-through": isHidden(item),
                   }}
                   onDragStart={(event) => {
