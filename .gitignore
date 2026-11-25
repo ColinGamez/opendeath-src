@@ -48,6 +48,7 @@ packages/desktop/resources/tor/
 node_modules.stale/
 packaging/release/
 release/
+packages/desktop/dist-workbench/
 /apps/
 # Captured profiles and downloaded toolchains: local scratch, never source.
 analysis/cleanprofile/

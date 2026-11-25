@@ -43,6 +43,13 @@ export function configureApplication() {
   if (debugBuild(build) && memoryLogInterval(process.env.OPENCODE_DESKTOP_MEMORY_LOG) !== undefined)
     app.commandLine.appendSwitch("enable-precise-memory-info")
 
+  // A packaged development build must not attach to the installed app's database or service.
+  if (app.isPackaged && CHANNEL === "dev" && !process.env.OPENCODE_DESKTOP_TEST_ROOT) {
+    const root = path.join(app.getPath("appData"), APP_ID, "workbench")
+    process.env.OPENCODE_DESKTOP_TEST_ROOT = root
+    process.env.OPENCODE_CONFIG_DIR = path.join(root, "config", "opencode")
+    process.env.OPENCODE_DB = path.join(root, "opencode.db")
+  }
   const testRoot = createTestRoot()
   app.setPath("userData", testRoot ? path.join(testRoot, "desktop") : path.join(app.getPath("appData"), APP_ID))
 

@@ -32,7 +32,7 @@ const child = spawn(electron, [desktop], {
   cwd: desktop,
   detached: true,
   stdio: "ignore",
-  windowsHide: true,
+  windowsHide: false,
   env: environment,
 })
 child.on("error", (error) => {
