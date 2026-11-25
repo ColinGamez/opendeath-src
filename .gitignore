@@ -60,3 +60,5 @@ analysis/cleanprofile/
 # Deployment staging: release binaries and the live counter are not source.
 packaging/website/downloads/
 packaging/website/downloads.json
+
+packages/desktop/dist-workbench-preview/

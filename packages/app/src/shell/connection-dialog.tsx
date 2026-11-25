@@ -96,7 +96,7 @@ export function ConnectionDialog(props: { autostart?: boolean }) {
         <DialogBody class="min-h-0">
           <div class="flex-1 min-h-0 overflow-y-auto flex flex-col gap-5 px-6 pb-6 pt-2">
             <div class="flex flex-wrap items-center gap-3">
-              <button type="button" class={primary} disabled={state.busy} onClick={() => void fix(true)}>
+              <button type="button" class={primary} disabled={state.busy} onClick={() => void fix(false)}>
                 Fix connection
               </button>
               <Show when={state.message}>

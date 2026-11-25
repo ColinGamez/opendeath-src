@@ -1,3 +1,4 @@
+import { BackgroundSection } from "@/shell/background-section"
 import { Component, Show } from "solid-js"
 import { Select } from "@opencode/ui/select"
 import { TextInput } from "@opencode/ui/text-input"
@@ -85,6 +86,7 @@ export const SettingsAppearance: Component = () => {
 
       <div class="settings-tab-body">
         <div class="settings-section">
+          <BackgroundSection />
           <SettingsList>
             <SettingsRow
               title={language.t("settings.general.row.colorScheme.title")}

@@ -1,9 +1,11 @@
+import { WorkbenchSection } from "./workbench-section"
+import { BackgroundSection } from "./background-section"
 import { createEffect, createMemo, createSignal, For, Match, onMount, Show, Switch, type JSX } from "solid-js"
 import { Dialog, DialogBody, DialogHeader, DialogTitleGroup } from "@opencode/ui/dialog"
 import { Icon } from "@opencode/ui/icon"
 import { useTheme, type ColorScheme } from "@opencode/ui/theme/context"
 import { usePlatform } from "@/runtime/platform/platform"
-import { clearBackground, getAccent, getBackground, getDialogOpacity, getRadius, getRainbow, getTextColor, setAccent, setBackgroundFile, setBackgroundOpacity, setDialogOpacity, setRadius, setRainbow, setTextColor, type RainbowTarget } from "@/shell/infinite-look"
+import { clearBackground, getAccent, getDialogOpacity, getRadius, getRainbow, getTextColor, setAccent, setDialogOpacity, setRadius, setRainbow, setTextColor, type RainbowTarget } from "@/shell/infinite-look"
 import { deckDensity, setDeckDensity, setStatusBand, statusBand } from "@/shell/ui-prefs"
 import { HudEditor } from "@/shell/hud-editor"
 import { hudEditing, hudSummary, setHudEditing } from "@/shell/hud-layout"
@@ -306,6 +308,7 @@ export function SettingsDialog() {
                     </Card>
                     <Card icon="outline-photo" title="Background" hint="Your own picture behind the window. It is shrunk and kept in this app only.">
                       <BackgroundSection />
+                      <WorkbenchSection />
                     </Card>
                     <Card icon="outline-text" title="Text color" hint="One color for all the text, over any theme.">
                       <TextColorSection />
@@ -602,68 +605,6 @@ function DialogOpacitySection() {
         }}
       />
     </label>
-  )
-}
-
-// Your own picture behind the window; the opacity is how much of the normal interface color stays over it.
-function BackgroundSection() {
-  const [look, setLook] = createSignal(getBackground())
-  const [note, setNote] = createSignal<string | undefined>()
-  let file: HTMLInputElement | undefined
-  const refresh = () => setLook(getBackground())
-
-  return (
-    <div class="flex flex-col gap-2">
-      <h3 class="text-13-medium text-v2-text-text-base">Background image</h3>
-      <div class="flex items-center gap-3 flex-wrap">
-        <button type="button" class={chip(false)} onClick={() => file?.click()}>
-          Choose image…
-        </button>
-        <button
-          type="button"
-          class={chip(false)}
-          disabled={!look().image}
-          onClick={() => {
-            clearBackground()
-            refresh()
-            setNote(undefined)
-          }}
-        >
-          Remove
-        </button>
-        <span class="text-12-regular text-v2-text-text-faint">PNG, JPG or WebP; it is shrunk and kept in this app only</span>
-      </div>
-      <input
-        ref={file}
-        type="file"
-        accept="image/*"
-        class="hidden"
-        onChange={async (event) => {
-          const picked = event.currentTarget.files?.[0]
-          event.currentTarget.value = ""
-          if (!picked) return
-          setNote((await setBackgroundFile(picked)) ?? undefined)
-          refresh()
-        }}
-      />
-      <Show when={look().image}>
-        <label class="flex items-center gap-3 text-12-regular text-v2-text-text-muted">
-          <span class="w-40 shrink-0">Interface opacity {look().opacity}%</span>
-          <input
-            type="range"
-            min="30"
-            max="100"
-            value={look().opacity}
-            class="flex-1"
-            onInput={(event) => {
-              setBackgroundOpacity(Number(event.currentTarget.value))
-              refresh()
-            }}
-          />
-        </label>
-      </Show>
-      <Show when={note()}>{(text) => <span class="text-12-regular text-v2-state-fg-danger">{text()}</span>}</Show>
-    </div>
   )
 }
 

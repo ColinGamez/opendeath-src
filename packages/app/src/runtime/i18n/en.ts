@@ -1,6 +1,55 @@
 import { DESKTOP_NATIVE_ENGLISH } from "./desktop-native"
 
 export const dict = {
+  "workbench.title": "Workbench presets and recovery",
+  "workbench.queue": "Queue new prompts until the current work finishes",
+  "workbench.notify": "Notify me when the agent finishes",
+  "workbench.review": "Show changes after each turn",
+  "workbench.presets":
+    "Save up to 12 named app-settings presets for different projects or workflows. Includes fonts, layout, shortcuts, notifications and permissions. Background images, models, connections, chats and project files are separate. Applying a preset saves a restore point first.",
+  "workbench.name": "Preset name",
+  "workbench.save": "Save preset",
+  "workbench.apply": "Apply",
+  "workbench.delete": "Delete",
+  "workbench.checkpoint": "Save settings restore point",
+  "workbench.restore": "Restore previous settings",
+  "workbench.saved": "Settings saved on this computer.",
+  "workbench.restored": "Settings restored. You can restore again to undo this change.",
+
+  "connection.stop.label": "Stop this request",
+  "connection.stop.pending": "Stopping?",
+  "connection.stop.done": "Stop requested",
+  "connection.stop.error": "Could not stop this request. Check the connection and try again.",
+
+  "connection.requests.savedScope":
+    "Latest request per chat, up to eight chats. Saved locally across restarts, without prompt text. Saved entries describe the last observed state, not current activity.",
+  "connection.requests.saved": "Saved",
+  "connection.requests.clear": "Clear request history",
+  "connection.requests.duration": "Request duration: {{seconds}} seconds",
+
+  "background.title": "Custom background",
+  "background.description":
+    "Choose a PNG, JPG, or WebP up to 20 MB. Images stay on this computer and are resized to 2560 pixels.",
+  "background.choose": "Choose background image",
+  "background.loading": "Preparing your background?",
+  "background.preview": "Preview: your conversation stays readable here.",
+  "background.opacity": "Interface opacity {{value}}%",
+  "background.fit": "Fit",
+  "background.fit.cover": "Fill window",
+  "background.fit.contain": "Fit whole image",
+  "background.fit.auto": "Original size",
+  "background.position": "Position",
+  "background.position.center": "Center",
+  "background.position.top": "Top",
+  "background.position.bottom": "Bottom",
+  "background.position.left": "Left",
+  "background.position.right": "Right",
+  "background.remove": "Remove background",
+  "background.error.type": "Choose a PNG, JPG, or WebP image.",
+  "background.error.size": "Choose an image smaller than 20 MB.",
+  "background.error.read": "Could not read this image, or loading timed out. Try another image.",
+  "background.error.storage": "Could not save this image. Try a smaller image. Your previous background is unchanged.",
+
   "connection.requests.title": "Recent model requests",
   "connection.requests.scope":
     "Latest request per chat, up to eight chats, observed in this window since launch. Previous errors remain visible after recovery. These diagnostics stay in memory until you copy them.",

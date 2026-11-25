@@ -28,6 +28,12 @@ test("an already working connection is left alone", async () => {
   expect(pc.tried).toEqual([])
 })
 
+test("Direct is retried before switching a previously selected Direct connection", async () => {
+  const pc = computer({ mode: "NONE", warp: true, works: ["NONE", "WARP"] })
+  expect((await fixConnection(pc.infinite, () => undefined)).mode).toBe("NONE")
+  expect(pc.tried).toEqual(["NONE"])
+})
+
 test("from scratch: WARP first, then direct as the last resort", async () => {
   const warp = computer({ warp: true, works: ["WARP"] })
   expect((await fixConnection(warp.infinite, () => undefined, true)).mode).toBe("WARP")

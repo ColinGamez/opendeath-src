@@ -54,3 +54,12 @@ test("the trace is bounded and keeps only the most recent request for each chat"
   expect(replaced).toHaveLength(8)
   expect(replaced.filter((row) => row.sessionID === "chat-5")).toHaveLength(1)
 })
+
+test("separate servers cannot overwrite matching session IDs and duration starts at first attempt", () => {
+  const rows = requestDiagnostics(requestDiagnostics([], { ...start, serverKey: "a" }), { ...start, serverKey: "b" })
+  expect(rows).toHaveLength(2)
+  const waiting = requestDiagnostics(rows, { ...retry, serverKey: "a" })
+  const done = requestDiagnostics(waiting, { ...base, id: "done", type: "completed", at: 900, serverKey: "a" })
+  expect(done[0]).toMatchObject({ startedAt: 100, at: 900, status: "recovered" })
+  expect(done[1]).toMatchObject({ serverKey: "b", status: "running" })
+})

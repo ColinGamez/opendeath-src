@@ -4,9 +4,13 @@
 const KEY_IMAGE = "infinite-bg"
 const KEY_OPACITY = "infinite-bg-opacity"
 const KEY_DIALOG_OPACITY = "infinite-dialog-opacity"
-const MAX_SIDE = 1920
+const KEY_FIT = "infinite-bg-fit"
+const KEY_POSITION = "infinite-bg-position"
+const MAX_SIDE = 2560
 // The layers that paint the window; the rest of the interface sits on top of them.
-const SURFACES = ["base", "deep", "layer-01", "layer-02", "layer-03", "layer-04"].map((name) => `--v2-background-bg-${name}`)
+const SURFACES = ["base", "deep", "layer-01", "layer-02", "layer-03", "layer-04"].map(
+  (name) => `--v2-background-bg-${name}`,
+)
 
 // Text tokens by weight: the full color, then the muted and the faint steps mixed from it.
 const TEXTS: [string, number][] = [
@@ -35,7 +39,23 @@ const read = (key: string) => {
   }
 }
 
-export const getBackground = () => ({ image: read(KEY_IMAGE) ?? "", opacity: clampOpacity(Number(read(KEY_OPACITY) ?? 78)) })
+export const backgroundFits = ["cover", "contain", "auto"] as const
+export const backgroundPositions = ["center", "top", "bottom", "left", "right"] as const
+export const getBackground = () => ({
+  image: read(KEY_IMAGE) ?? "",
+  opacity: clampOpacity(Number(read(KEY_OPACITY) ?? 78)),
+  fit: backgroundFits.find((value) => value === read(KEY_FIT)) ?? "cover",
+  position: backgroundPositions.find((value) => value === read(KEY_POSITION)) ?? "center",
+})
+
+export function setBackgroundLayout(
+  fit: (typeof backgroundFits)[number],
+  position: (typeof backgroundPositions)[number],
+) {
+  localStorage.setItem(KEY_FIT, fit)
+  localStorage.setItem(KEY_POSITION, position)
+  applyBackground()
+}
 
 const clampOpacity = (value: number) => (Number.isFinite(value) ? Math.min(100, Math.max(30, Math.round(value))) : 78)
 
@@ -119,8 +139,7 @@ const RADIUS_STOCK: Record<string, number> = {
   "--radius-xl": 0.625,
 }
 
-const clampRadius = (value: number) =>
-  Number.isFinite(value) ? Math.min(200, Math.max(0, Math.round(value))) : 100
+const clampRadius = (value: number) => (Number.isFinite(value) ? Math.min(200, Math.max(0, Math.round(value))) : 100)
 
 /** Corner roundness in percent: 0 square, 100 the theme's own, 200 fully round. */
 export const getRadius = () => clampRadius(Number(read(KEY_RADIUS) ?? 100))
@@ -149,7 +168,7 @@ export function applyPaint() {
 /** Paints the stored image (or removes it) and re-reads the surface colors, which change with the theme. */
 export function applyBackground() {
   const root = document.documentElement
-  const { image, opacity } = getBackground()
+  const { image, opacity, fit, position } = getBackground()
   for (const name of SURFACES) root.style.removeProperty(name)
   // body and #root paint the same deep color under everything; without a picture they keep it.
   const frame = [document.body, document.getElementById("root")]
@@ -157,7 +176,11 @@ export function applyBackground() {
   surfaceAlpha = 100
   // The settings window repaints the surfaces from these solid colors (see .infinite-settings in index.css).
   const solid = getComputedStyle(root)
-  for (const name of SURFACES) root.style.setProperty(name.replace("--v2-background-bg-", "--infinite-solid-"), solid.getPropertyValue(name).trim())
+  for (const name of SURFACES)
+    root.style.setProperty(
+      name.replace("--v2-background-bg-", "--infinite-solid-"),
+      solid.getPropertyValue(name).trim(),
+    )
   root.style.setProperty("--infinite-dialog-alpha", `${getDialogOpacity()}%`)
   if (!image) {
     root.style.removeProperty("background-image")
@@ -167,8 +190,8 @@ export function applyBackground() {
   const alpha = Math.round((1 - Math.sqrt(1 - opacity / 100)) * 100)
   surfaceAlpha = alpha
   root.style.backgroundImage = `url("${image}")`
-  root.style.backgroundSize = "cover"
-  root.style.backgroundPosition = "center"
+  root.style.backgroundSize = fit
+  root.style.backgroundPosition = position
   root.style.backgroundRepeat = "no-repeat"
   const computed = getComputedStyle(root)
   for (const name of SURFACES) {
@@ -177,22 +200,42 @@ export function applyBackground() {
   }
 }
 
-/** Saves a picked image: shrunk to 1920 px and stored as JPEG so it fits in localStorage. Returns an error text on failure. */
-export async function setBackgroundFile(file: File): Promise<string | undefined> {
-  if (!file.type.startsWith("image/")) return "That file is not an image."
+/** Decode locally, cap resolution, and save only after a successful import. */
+export type BackgroundError =
+  | "background.error.type"
+  | "background.error.size"
+  | "background.error.read"
+  | "background.error.storage"
+
+export async function setBackgroundFile(file: File, signal: AbortSignal): Promise<BackgroundError | undefined> {
+  if (signal.aborted) return "background.error.read"
+  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) return "background.error.type"
+  if (file.size > 20 * 1024 * 1024) return "background.error.size"
+  const url = URL.createObjectURL(file)
+  const picture = new Image()
+  const decoded = new Promise<boolean>((resolve) => {
+    picture.onload = () => resolve(true)
+    picture.onerror = () => resolve(false)
+    signal.addEventListener("abort", () => resolve(false), { once: true })
+    picture.src = url
+  })
   try {
-    const bitmap = await createImageBitmap(file)
-    const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height))
+    if (!(await decoded) || signal.aborted) return "background.error.read"
+    const scale = Math.min(1, MAX_SIDE / Math.max(picture.naturalWidth, picture.naturalHeight))
     const canvas = document.createElement("canvas")
-    canvas.width = Math.max(1, Math.round(bitmap.width * scale))
-    canvas.height = Math.max(1, Math.round(bitmap.height * scale))
-    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
-    bitmap.close()
-    localStorage.setItem(KEY_IMAGE, canvas.toDataURL("image/jpeg", 0.85))
+    canvas.width = Math.max(1, Math.round(picture.naturalWidth * scale))
+    canvas.height = Math.max(1, Math.round(picture.naturalHeight * scale))
+    const context = canvas.getContext("2d")
+    if (!context) return "background.error.read"
+    context.drawImage(picture, 0, 0, canvas.width, canvas.height)
+    localStorage.setItem(KEY_IMAGE, canvas.toDataURL("image/webp", 0.85))
+    applyBackground()
   } catch {
-    return "Could not use that image (too big for the app's storage, or not a readable picture)."
+    return "background.error.storage"
+  } finally {
+    picture.src = ""
+    URL.revokeObjectURL(url)
   }
-  applyBackground()
 }
 
 export function clearBackground() {
@@ -256,7 +299,10 @@ function tickRainbow() {
   if (getRainbow() === "background") {
     RAINBOW_SURFACES[dark ? "dark" : "light"].forEach((light, index) => {
       const surface = `hsl(${drift} ${dark ? 60 : 80}% ${light}%)`
-      root.style.setProperty(SURFACES[index]!, surfaceAlpha === 100 ? surface : `color-mix(in srgb, ${surface} ${surfaceAlpha}%, transparent)`)
+      root.style.setProperty(
+        SURFACES[index]!,
+        surfaceAlpha === 100 ? surface : `color-mix(in srgb, ${surface} ${surfaceAlpha}%, transparent)`,
+      )
     })
     return
   }
@@ -275,4 +321,3 @@ export function initLook() {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return
   setInterval(tickRainbow, 90)
 }
-

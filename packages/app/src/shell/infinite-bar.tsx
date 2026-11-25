@@ -2,6 +2,8 @@ import { createEffect, createSignal, For, onCleanup, onMount, Show, type JSX } f
 import { createStore } from "solid-js/store"
 import { useGlobal } from "@/runtime/server/runtime"
 import { ServerConnection } from "@/runtime/server/registry"
+import { persisted } from "@/runtime/persistence/storage"
+import { requestHistorySchema } from "./request-diagnostics"
 import { requestDiagnostics, type RequestDiagnostic } from "./request-diagnostics"
 import { useDialog } from "@opencode/ui/context/dialog"
 import { usePlatform } from "@/runtime/platform/platform"
@@ -123,7 +125,23 @@ export function InfiniteBar() {
   const platform = usePlatform()
   const global = useGlobal()
   const [diagnostics, setDiagnostics] = createStore<{ rows: RequestDiagnostic[] }>({ rows: [] })
+  const [history, setHistory, , historyReady] = persisted(
+    { key: "opendeath.request-history.v1" },
+    requestHistorySchema,
+    { rows: [] },
+  )
+  const requests = () =>
+    [
+      ...diagnostics.rows,
+      ...history.rows
+        .filter(
+          (row) =>
+            !diagnostics.rows.some((live) => live.sessionID === row.sessionID && live.serverKey === row.serverKey),
+        )
+        .map((row) => ({ ...row, saved: true })),
+    ].slice(0, 8)
   createEffect(() => {
+    if (!historyReady()) return
     global.servers.list().forEach((server) => {
       const sdk = global.serverCtx(ServerConnection.key(server))?.sdk
       if (!sdk) return
@@ -138,6 +156,7 @@ export function InfiniteBar() {
             return
           const base = {
             id: event.id,
+            serverKey: ServerConnection.key(server),
             sessionID: event.data.sessionID,
             messageID: event.data.assistantMessageID,
             at: event.created,
@@ -159,6 +178,7 @@ export function InfiniteBar() {
                       : { type: "failed" as const }),
                   }
           setDiagnostics("rows", (rows) => requestDiagnostics(rows, update))
+          setHistory("rows", (rows) => requestDiagnostics([...rows], update))
         }),
       )
     })
@@ -402,7 +422,14 @@ export function InfiniteBar() {
         title="What is failing right now, and the fixes that apply to it."
         onClick={() =>
           void dialog.show(() => (
-            <HelpDialog message={result()?.ok === false ? result()?.message : undefined} requests={diagnostics.rows} />
+            <HelpDialog
+              message={result()?.ok === false ? result()?.message : undefined}
+              requests={requests()}
+              onClear={() => {
+                setDiagnostics("rows", [])
+                setHistory("rows", [])
+              }}
+            />
           ))
         }
       >

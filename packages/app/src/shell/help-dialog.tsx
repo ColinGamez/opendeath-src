@@ -1,3 +1,4 @@
+import { RequestStop } from "./request-stop"
 import { createSignal, For, Show } from "solid-js"
 import { Dialog, DialogBody, DialogHeader, DialogTitleGroup } from "@opencode/ui/dialog"
 import { usePlatform } from "@/runtime/platform/platform"
@@ -69,7 +70,12 @@ const LINUX_INSTALL: { label: string; command: string }[] = [
 ]
 
 /** The error the deck last reported, plus the fixes that actually apply to it. */
-export function HelpDialog(props: { message?: string; version?: string; requests?: RequestDiagnostic[] }) {
+export function HelpDialog(props: {
+  message?: string
+  version?: string
+  requests?: RequestDiagnostic[]
+  onClear?: () => void
+}) {
   const infinite = usePlatform().infinite
   const language = useLanguage()
   const [mode, setMode] = createSignal("")
@@ -126,12 +132,16 @@ export function HelpDialog(props: { message?: string; version?: string; requests
 
             <section class="flex flex-col gap-2">
               <h3 class="text-13-medium text-v2-text-text-base">{language.t("connection.requests.title")}</h3>
-              <p class="text-13-regular text-v2-text-text-muted">{language.t("connection.requests.scope")}</p>
+              <p class="text-13-regular text-v2-text-text-muted">{language.t("connection.requests.savedScope")}</p>
+              <button type="button" class={chip} onClick={() => props.onClear?.()}>
+                {language.t("connection.requests.clear")}
+              </button>
               <Show when={props.requests?.length} fallback={<p>{language.t("connection.requests.empty")}</p>}>
                 <For each={props.requests}>
                   {(request) => (
                     <div class="rounded-xl border border-v2-border-border-muted px-4 py-3 text-13-regular break-words">
                       <div class="text-v2-text-text-base">
+                        {request.saved ? language.t("connection.requests.saved") + " ? " : ""}
                         {language.t(`connection.requests.${request.status}`)} · {new Date(request.at).toLocaleString()}
                       </div>
                       <div>
@@ -140,6 +150,21 @@ export function HelpDialog(props: { message?: string; version?: string; requests
                           provider: request.provider ?? "?",
                         })}
                       </div>
+                      <Show
+                        when={
+                          request.startedAt !== undefined &&
+                          ["completed", "recovered", "failed"].includes(request.status)
+                        }
+                      >
+                        <div>
+                          {language.t("connection.requests.duration", {
+                            seconds: ((request.at - (request.startedAt ?? request.at)) / 1000).toFixed(1),
+                          })}
+                        </div>
+                      </Show>
+                      <Show when={!request.saved && (request.status === "running" || request.status === "retrying")}>
+                        <RequestStop request={request} />
+                      </Show>
                       <Show when={request.attempt}>
                         {(attempt) => <div>{language.t("connection.requests.attempt", { attempt: attempt() })}</div>}
                       </Show>

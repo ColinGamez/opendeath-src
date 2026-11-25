@@ -81,7 +81,7 @@ async function attempt(infinite: Infinite, report: (text: string) => void, fresh
   }
   const options = await infinite.getOptions()
   const order = [
-    ...(fresh || current === "NONE" || !["WARP", "PROXY", "SOCKS"].includes(current) ? [] : [current]),
+    ...(fresh || !["NONE", "WARP", "PROXY", "SOCKS"].includes(current) ? [] : [current]),
     "WARP",
     ...(options.socks ? ["SOCKS"] : []),
     ...(options.custom ? ["PROXY"] : []),

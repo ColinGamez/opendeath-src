@@ -387,6 +387,9 @@ export const { use: useSettings, provider: SettingsProvider } = createSimpleCont
 
     return {
       ready,
+      restore(value: Settings) {
+        setStore(reconcile(structuredClone(unwrap(value))))
+      },
       get current() {
         return store
       },
